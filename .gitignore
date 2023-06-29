@@ -1,4 +1,8 @@
 .idea
-geckodriver
-geckodriver.log
-CL-Austin.xlsx
+.git
+.gitignore
+.DS_Store
+drivers/geckodriver
+scripts/to_mysql.py
+sheets/cl_austin.xlsx
+sheets/cl_houston.xlsx
