@@ -4,6 +4,7 @@ import datetime
 import os
 import pandas as pd
 import re
+import requests
 import time
 from selenium import webdriver
 from selenium.webdriver import ActionChains
@@ -29,7 +30,7 @@ search_field = driver.find_element(By.XPATH, '/html/body/div[2]/section/div[2]/d
 search_field.clear()
 search_field.send_keys(search_query)
 search_field.send_keys(Keys.ENTER)
-time.sleep(10)  # If you start getting "ValueError:" "Expected axis has 0 elements" increase time.sleep
+time.sleep(11)  # If you start getting "ValueError:" "Expected axis has 0 elements" increase time.sleep
 
 posts_html = []
 to_stop = False
@@ -77,6 +78,9 @@ print('Collected {0} listings'.format(len(posts_html)))
 CraigslistPost = namedtuple('CraigslistPost',
                             ['title', 'price', 'post_timestamp', 'location', 'post_url', 'image_url', 'data_pid'])
 craigslist_posts = []
+image_paths = []
+default_image_path = "images/no_image.png"
+source_name = 'cl_austin'
 for posts_html in posts_html:
     title = getattr(posts_html.find('a', 'posting-title'), 'text', None)
     price_element = posts_html.find('span', 'priceinfo')
@@ -91,7 +95,21 @@ for posts_html in posts_html:
             if location.strip() == '':
                 location = 'Austin area'
     post_url = posts_html.find('a', 'posting-title').get('href') if posts_html.find('a', 'posting-title') else ''
+    if not os.path.exists(f"images/{source_name}"):
+        os.makedirs(f"images/{source_name}")
     image_url = posts_html.find('img').get('src') if posts_html.find('img') else ''
+    file_path = ""
+    if image_url:
+        response = requests.get(image_url)
+        if response.status_code == 200:
+            image_file_name = image_url.split("/")[-1]
+            file_path = os.path.join(f"images/{source_name}", image_file_name)
+            with open(file_path, "wb") as file:
+                file.write(response.content)
+                print(f"Image downloaded: {file_path}")
+    else:
+        file_path = "images/no_image.png"
+    image_paths.append(file_path)
     if image_url.strip() == '':
         image_url = 'No image'
     data_pid = posts_html.get('data-pid')
@@ -99,10 +117,11 @@ for posts_html in posts_html:
 
 df = pd.DataFrame(craigslist_posts)
 df.columns = ['Title', 'Price', 'Date Posted', 'Location', 'post_url', 'image_url', 'data-pid']
-df.dropna(inplace=True)
 current_time = datetime.datetime.now().strftime("%m/%d %H:%M:%S")
 df.insert(0, 'Time Added', current_time)
-df.insert(0, 'Source', "cl-austin")
+df.insert(0, 'Source', f"{source_name}")
+df['image_path'] = image_paths
+df.dropna(inplace=True)
 df['link'] = df.apply(lambda row: f'=HYPERLINK("{row["post_url"]}","Link")', axis=1)
-df.to_excel('sheets/cl_austin.xlsx', index=False)
+df.to_excel(f'sheets/{source_name}.xlsx', index=False)
 driver.close()
