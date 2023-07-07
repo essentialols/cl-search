@@ -3,17 +3,15 @@ import time
 
 def job():
     try:
-        with open('scripts/cl_austin.py', 'r') as file:
-            cl_austin = file.read()
-            exec(cl_austin)
+        file_names = ['cl_austin.py',
+                      'cl_houston.py',
+                      'to_mysql.py']
 
-        with open('scripts/cl_houston.py', 'r') as file:
-            cl_houston = file.read()
-            exec(cl_houston)
-
-        with open('scripts/to_mysql.py', 'r') as file:
-            to_mysql = file.read()
-            exec(to_mysql)
+        for file_name in file_names:
+            print(f"Processing file: {file_name}")
+            with open(f'scripts/{file_name}', 'r') as file:
+                script = file.read()
+                exec(script)
 
     except Exception as e:
         print(f"Error: {e}")

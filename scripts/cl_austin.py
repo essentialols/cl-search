@@ -23,6 +23,8 @@ driver = webdriver.Firefox(service=firefox_service, options=firefox_option)
 driver.implicitly_wait(9)
 
 url = 'https://austin.craigslist.org/'
+source_name = f"cl_{url.split('.')[0].split('//')[-1]}"
+city_name = source_name.split("_")[1].capitalize()
 driver.get(url)
 
 search_query = 'record player'
@@ -80,7 +82,6 @@ CraigslistPost = namedtuple('CraigslistPost',
 craigslist_posts = []
 image_paths = []
 default_image_path = "images/no_image.png"
-source_name = 'cl_austin'
 for posts_html in posts_html:
     title = getattr(posts_html.find('a', 'posting-title'), 'text', None)
     price_element = posts_html.find('span', 'priceinfo')
@@ -93,7 +94,7 @@ for posts_html in posts_html:
             post_timestamp = meta_info.split(separator.text)[0]
             location = meta_info.split(separator.text)[1]
             if location.strip() == '':
-                location = 'Austin area'
+                location = f'{city_name} area'
     post_url = posts_html.find('a', 'posting-title').get('href') if posts_html.find('a', 'posting-title') else ''
     if not os.path.exists(f"images/{source_name}"):
         os.makedirs(f"images/{source_name}")
@@ -110,7 +111,7 @@ for posts_html in posts_html:
     else:
         file_path = f'{default_image_path}'
     image_paths.append(file_path)
-    if image_url.strip() == '':
+    if image_url.strip() == '': # sometimes this errors out if the scroll_pause_time is too low
         image_url = 'No image'
     data_pid = posts_html.get('data-pid')
     craigslist_posts.append(CraigslistPost(title, price, post_timestamp, location, post_url, image_url, data_pid))
