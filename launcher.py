@@ -14,11 +14,14 @@ def job():
 
     #  This section is where we run the script to load the spreadsheets into MySQL
 
+    with open('scripts/to_mysql.py', 'r') as file:
+        to_mysql = file.read()
+        exec(to_mysql)
 
 
 job()
 
-schedule.every(45).to(75).minutes.do(job)
+schedule.every(70).to(90).minutes.do(job)
 
 while True:
     schedule.run_pending()

@@ -93,7 +93,7 @@ for posts_html in posts_html:
             post_timestamp = meta_info.split(separator.text)[0]
             location = meta_info.split(separator.text)[1]
             if location.strip() == '':
-                location = 'Houston area'
+                location = 'Austin area'
     post_url = posts_html.find('a', 'posting-title').get('href') if posts_html.find('a', 'posting-title') else ''
     if not os.path.exists(f"images/{source_name}"):
         os.makedirs(f"images/{source_name}")
@@ -116,12 +116,10 @@ for posts_html in posts_html:
     craigslist_posts.append(CraigslistPost(title, price, post_timestamp, location, post_url, image_url, data_pid))
 
 df = pd.DataFrame(craigslist_posts)
-df.columns = ['Title', 'Price', 'Date Posted', 'Location', 'post_url', 'image_url', 'data-pid']
 current_time = datetime.datetime.now().strftime("%m/%d %H:%M:%S")
-df.insert(0, 'Time Added', current_time)
-df.insert(0, 'Source', f"{source_name}")
+df.insert(0, 'time_added', current_time)
+df.insert(0, 'source', f"{source_name}")
 df['image_path'] = image_paths
 df.dropna(inplace=True)
-df['link'] = df.apply(lambda row: f'=HYPERLINK("{row["post_url"]}","Link")', axis=1)
 df.to_excel(f'sheets/{source_name}.xlsx', index=False)
 driver.close()
