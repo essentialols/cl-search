@@ -108,7 +108,7 @@ for posts_html in posts_html:
                 file.write(response.content)
                 print(f"Image downloaded: {file_path}")
     else:
-        file_path = "images/no_image.png"
+        file_path = f'{default_image_path}'
     image_paths.append(file_path)
     if image_url.strip() == '':
         image_url = 'No image'
