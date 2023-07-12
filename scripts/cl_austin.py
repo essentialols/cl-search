@@ -88,6 +88,8 @@ for posts_html in posts_html:
     title = getattr(posts_html.find('a', 'posting-title'), 'text', None)
     price_element = posts_html.find('span', 'priceinfo')
     price = price_element.text.strip() if price_element is not None else 'Price not given'
+    post_url = posts_html.find('a', 'posting-title').get('href') if posts_html.find('a', 'posting-title') else ''
+
     meta_div = posts_html.find('div', class_='meta')
     if meta_div:
         meta_info = meta_div.get_text(strip=True)
@@ -97,26 +99,40 @@ for posts_html in posts_html:
             location = meta_info.split(separator.text)[1]
             if location.strip() == '':
                 location = f'{city_name} area'
-    post_url = posts_html.find('a', 'posting-title').get('href') if posts_html.find('a', 'posting-title') else ''
-    if not os.path.exists(f"{launcher_path}/images/{source_name}"):
-        os.makedirs(f"{launcher_path}/images/{source_name}")
+
+    create_dir = f"{launcher_path}/images/{source_name}"
+    if not os.path.exists(create_dir):
+        os.makedirs(create_dir)
     image_url = posts_html.find('img').get('src') if posts_html.find('img') else ''
     image_path = ""
     if image_url:
-        response = requests.get(image_url)
-        if response.status_code == 200:
-            image_file_name = image_url.split("/")[-1]
-            image_path = os.path.join(f"{launcher_path}/images/{source_name}", image_file_name)
-            with open(image_path, "wb") as file:
-                file.write(response.content)
-                print(f"Image downloaded: {image_path}")
+        image_file_name = image_url.split("/")[-1]
+        image_path = os.path.join(create_dir, image_file_name)
+        if not os.path.exists(image_path):
+            response = requests.get(image_url)
+            if response.status_code == 200:
+                with open(image_path, "wb") as file:
+                    file.write(response.content)
+                    print(f"Image downloaded: {image_path}")
+        else:
+            print(f"Image already exists: {image_path}")
     else:
         image_path = f'{default_image_path}'
+        print("No image found: using default image")
     image_paths.append(image_path)
+
     if image_url.strip() == '': # sometimes this errors out if the scroll_pause_time is too low
         image_url = 'No image'
+
     data_pid = posts_html.get('data-pid')
     craigslist_posts.append(CraigslistPost(title, price, post_timestamp, location, post_url, image_url, data_pid))
+
+existing_images = os.listdir(create_dir)
+for image_file in existing_images:
+    extra_images = os.path.join(create_dir, image_file)
+    if extra_images not in image_paths:
+        os.remove(extra_images)
+        print(f"Deleted extra image: {extra_images}")
 
 df = pd.DataFrame(craigslist_posts)
 current_time = datetime.datetime.now().strftime("%m/%d %H:%M:%S")

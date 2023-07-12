@@ -9,6 +9,7 @@ def job():
         print("Starting Job...")
 
         file_names = ['cl_austin.py',
+                      'cl_dallas.py',
                       'cl_houston.py',
                       'cl_san_antonio.py',
                       'to_mysql.py']
