@@ -1,17 +1,26 @@
 import schedule
 import time
+import os
+
+launcher_path = os.path.dirname(os.path.abspath(__file__))
 
 def job():
     try:
+        print("Starting Job...")
+
         file_names = ['cl_austin.py',
                       'cl_houston.py',
+                      'cl_san_antonio.py',
                       'to_mysql.py']
 
         for file_name in file_names:
-            print(f"Processing file: {file_name}")
-            with open(f'scripts/{file_name}', 'r') as file:
+            print(f"Processing: {file_name}")
+            file_path = os.path.join(launcher_path, 'scripts', file_name)
+            with open(file_path, 'r') as file:
                 script = file.read()
                 exec(script)
+
+        print("Job Complete!")
 
     except Exception as e:
         print(f"Error: {e}")

@@ -22,7 +22,7 @@ firefox_option.set_preference('general.useragent.override', user_agent)
 driver = webdriver.Firefox(service=firefox_service, options=firefox_option)
 driver.implicitly_wait(9)
 
-url = 'https://houston.craigslist.org/'
+url = 'https://sanantonio.craigslist.org/'
 search_query = 'record player'
 
 source_name = os.path.splitext(f'{file_name}')[0]

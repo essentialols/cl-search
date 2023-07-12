@@ -23,11 +23,13 @@ driver = webdriver.Firefox(service=firefox_service, options=firefox_option)
 driver.implicitly_wait(9)
 
 url = 'https://austin.craigslist.org/'
-source_name = f"cl_{url.split('.')[0].split('//')[-1]}"
-city_name = source_name.split("_")[1].capitalize()
+search_query = 'record player'
+
+source_name = os.path.splitext(f'{file_name}')[0]
+city_name = re.sub(r'cl_', '', source_name).replace('_', ' ').title()
+print(f"Scrapping {city_name} Craigslist...")
 driver.get(url)
 
-search_query = 'record player'
 search_field = driver.find_element(By.XPATH, '/html/body/div[2]/section/div[2]/div[1]/div/input')
 search_field.clear()
 search_field.send_keys(search_query)
@@ -81,7 +83,7 @@ CraigslistPost = namedtuple('CraigslistPost',
                             ['title', 'price', 'post_timestamp', 'location', 'post_url', 'image_url', 'data_pid'])
 craigslist_posts = []
 image_paths = []
-default_image_path = "images/no_image.png"
+default_image_path = f"{launcher_path}/images/no_image.png"
 for posts_html in posts_html:
     title = getattr(posts_html.find('a', 'posting-title'), 'text', None)
     price_element = posts_html.find('span', 'priceinfo')
@@ -96,21 +98,21 @@ for posts_html in posts_html:
             if location.strip() == '':
                 location = f'{city_name} area'
     post_url = posts_html.find('a', 'posting-title').get('href') if posts_html.find('a', 'posting-title') else ''
-    if not os.path.exists(f"images/{source_name}"):
-        os.makedirs(f"images/{source_name}")
+    if not os.path.exists(f"{launcher_path}/images/{source_name}"):
+        os.makedirs(f"{launcher_path}/images/{source_name}")
     image_url = posts_html.find('img').get('src') if posts_html.find('img') else ''
-    file_path = ""
+    image_path = ""
     if image_url:
         response = requests.get(image_url)
         if response.status_code == 200:
             image_file_name = image_url.split("/")[-1]
-            file_path = os.path.join(f"images/{source_name}", image_file_name)
-            with open(file_path, "wb") as file:
+            image_path = os.path.join(f"{launcher_path}/images/{source_name}", image_file_name)
+            with open(image_path, "wb") as file:
                 file.write(response.content)
-                print(f"Image downloaded: {file_path}")
+                print(f"Image downloaded: {image_path}")
     else:
-        file_path = f'{default_image_path}'
-    image_paths.append(file_path)
+        image_path = f'{default_image_path}'
+    image_paths.append(image_path)
     if image_url.strip() == '': # sometimes this errors out if the scroll_pause_time is too low
         image_url = 'No image'
     data_pid = posts_html.get('data-pid')
@@ -122,5 +124,6 @@ df.insert(0, 'time_added', current_time)
 df.insert(0, 'source', f"{source_name}")
 df['image_path'] = image_paths
 df.dropna(inplace=True)
-df.to_excel(f'sheets/{source_name}.xlsx', index=False)
+df.to_excel(f'{launcher_path}/sheets/{source_name}.xlsx', index=False)
+print(f"Created {source_name}.xlsx")
 driver.close()
