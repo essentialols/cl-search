@@ -1,6 +1,14 @@
 import schedule
 import time
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+db_host = os.environ['MYSQL_HOST']
+db_port = os.environ['MYSQL_PORT']
+db_user = os.environ['MYSQL_USER']
+db_pass = os.environ['MYSQL_PASSWORD']
+db_database = os.environ['MYSQL_DB']
 
 launcher_path = os.path.dirname(os.path.abspath(__file__))
 

@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 from collections import namedtuple
 import datetime
+import pytz
 import os
 import pandas as pd
 import re
@@ -30,11 +31,14 @@ city_name = re.sub(r'cl_', '', source_name).replace('_', ' ').title()
 print(f"Scrapping {city_name} Craigslist...")
 driver.get(url)
 
-search_field = driver.find_element(By.XPATH, '/html/body/div[2]/section/div[2]/div[1]/div/input')
+for_sale = driver.find_element(By.XPATH, '/html/body/div[2]/section/div[3]/div[3]/div[2]/h3/a')
+for_sale.click()
+time.sleep(8)
+search_field = driver.find_element(By.XPATH, '/html/body/div[1]/main/form/div[1]/div/div/input')
 search_field.clear()
 search_field.send_keys(search_query)
 search_field.send_keys(Keys.ENTER)
-time.sleep(11)  # If you start getting "ValueError:" "Expected axis has 0 elements" increase time.sleep
+time.sleep(5)  # If you start getting "ValueError:" "Expected axis has 0 elements" increase time.sleep
 
 posts_html = []
 to_stop = False
@@ -84,6 +88,19 @@ CraigslistPost = namedtuple('CraigslistPost',
 craigslist_posts = []
 image_paths = []
 default_image_path = f"{launcher_path}/images/no_image.png"
+
+def check_image_exists(image_path):
+    for root, _, files in os.walk(os.path.join(f"{launcher_path}/images")):
+        if os.path.basename(image_path) in files:
+            return True
+    return False
+
+def find_image_path(image_path):
+    for root, _, files in os.walk(f"{launcher_path}/images"):
+        if os.path.basename(image_path) in files:
+            return os.path.join(root, os.path.basename(image_path))
+    return None
+
 for posts_html in posts_html:
     title = getattr(posts_html.find('a', 'posting-title'), 'text', None)
     price_element = posts_html.find('span', 'priceinfo')
@@ -103,19 +120,25 @@ for posts_html in posts_html:
     create_dir = f"{launcher_path}/images/{source_name}"
     if not os.path.exists(create_dir):
         os.makedirs(create_dir)
+
     image_url = posts_html.find('img').get('src') if posts_html.find('img') else ''
     image_path = ""
+
     if image_url:
         image_file_name = image_url.split("/")[-1]
         image_path = os.path.join(create_dir, image_file_name)
-        if not os.path.exists(image_path):
+
+        if not check_image_exists(image_path):
             response = requests.get(image_url)
             if response.status_code == 200:
                 with open(image_path, "wb") as file:
                     file.write(response.content)
                     print(f"Image downloaded: {image_path}")
         else:
-            print(f"Image already exists: {image_path}")
+            actual_image_path = find_image_path(image_path)
+            if actual_image_path:
+                print(f"Image already exists: {actual_image_path}")
+                image_path = actual_image_path
     else:
         image_path = f'{default_image_path}'
         print("No image found: using default image")
@@ -127,15 +150,19 @@ for posts_html in posts_html:
     data_pid = posts_html.get('data-pid')
     craigslist_posts.append(CraigslistPost(title, price, post_timestamp, location, post_url, image_url, data_pid))
 
-existing_images = os.listdir(create_dir)
+existing_images = set()
+for root, _, files in os.walk(create_dir):
+    for image_file in files:
+        existing_images.add(os.path.join(root, image_file))
+
 for image_file in existing_images:
-    extra_images = os.path.join(create_dir, image_file)
-    if extra_images not in image_paths:
-        os.remove(extra_images)
-        print(f"Deleted extra image: {extra_images}")
+    if image_file not in image_paths:
+        os.remove(image_file)
+        print(f"Deleted extra image: {image_file}")
 
 df = pd.DataFrame(craigslist_posts)
-current_time = datetime.datetime.now().strftime("%m/%d %H:%M:%S")
+timezone = pytz.timezone('Asia/Jakarta')
+current_time = datetime.datetime.now(timezone).strftime("%m/%d %H:%M:%S")
 df.insert(0, 'time_added', current_time)
 df.insert(0, 'source', f"{source_name}")
 df['image_path'] = image_paths
