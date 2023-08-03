@@ -11,7 +11,7 @@ db = mysql.connector.connect(
     database=f'{db_database}'
 )
 
-folder_path = 'sheets'
+folder_path = f"{launcher_path}/sheets/filtered"
 file_names = os.listdir(folder_path)
 
 print(f"Writing to: {db_database}")
@@ -19,9 +19,9 @@ print(f"Writing to: {db_database}")
 cursor = db.cursor()
 
 for file_name in file_names:
-    if file_name.endswith('.xlsx'):
+    if file_name.endswith('.csv'):
         source_name = os.path.splitext(file_name)[0]
-        df = pd.read_excel(f'{os.path.join(folder_path, file_name)}')
+        df = pd.read_csv(f'{os.path.join(folder_path, file_name)}')
         columns = ", ".join([f"{col} VARCHAR(255)" for col in df.columns])
         drop_query = f"DROP TABLE IF EXISTS {source_name};"
         create_table_query = f"CREATE TABLE IF NOT EXISTS {source_name} ({columns}, id INT AUTO_INCREMENT PRIMARY KEY);"

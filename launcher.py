@@ -1,6 +1,7 @@
 import schedule
 import time
 import os
+import pandas as pd
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,11 +17,15 @@ def job():
     try:
         print("Starting Job...")
 
-        file_names = ['cl_austin.py',
-                      'cl_dallas.py',
-                      'cl_houston.py',
-                      'cl_san_antonio.py',
-                      'to_mysql.py']
+        file_names = [
+            'cl_austin.py',
+            'cl_dallas.py',
+            'cl_houston.py',
+            'cl_san_antonio.py',
+            'remove_extra_images.py',
+            'filter_csv.py',
+            'to_mysql.py'
+                      ]
 
         for file_name in file_names:
             print(f"Processing: {file_name}")
