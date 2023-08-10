@@ -1,5 +1,8 @@
 import os
 import pandas as pd
+import sys
+
+launcher_path = sys.argv[2]
 
 def read_words_from_file(file_path):
     with open(file_path, 'r') as file:
@@ -8,15 +11,16 @@ def read_words_from_file(file_path):
 
 def filter_csv_by_words(csv_file, words):
     df = pd.read_csv(csv_file)
-    df = df[~df['title'].str.lower().str.contains('|'.join(words), na=False)]
+    if words:
+        df = df[~df['title'].str.lower().str.contains('|'.join(words), na=False)]
     return df
 
 def save_filtered_csv(filtered_df, output_file):
     filtered_df.to_csv(output_file, index=False)
 
 sheets_folder = f"{launcher_path}/sheets"
-words_file = "filter_words.txt"
-output_folder = f"{launcher_path}/sheets/filtered"
+words_file = f"{launcher_path}/filter_words.txt"
+output_folder = f"{launcher_path}/filtered"
 
 if not os.path.exists(output_folder):
     os.makedirs(output_folder)

@@ -2,6 +2,17 @@ import mysql.connector
 import pandas as pd
 import os
 import time
+import sys
+from dotenv import load_dotenv
+
+launcher_path = sys.argv[2]
+
+load_dotenv()
+db_host = os.environ['MYSQL_HOST']
+db_port = os.environ['MYSQL_PORT']
+db_user = os.environ['MYSQL_USER']
+db_pass = os.environ['MYSQL_PASSWORD']
+db_database = os.environ['MYSQL_DB']
 
 db = mysql.connector.connect(
     user=f'{db_user}',
@@ -11,7 +22,7 @@ db = mysql.connector.connect(
     database=f'{db_database}'
 )
 
-folder_path = f"{launcher_path}/sheets/filtered"
+folder_path = f"{launcher_path}/filtered"
 file_names = os.listdir(folder_path)
 
 print(f"Writing to: {db_database}")

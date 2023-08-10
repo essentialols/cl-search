@@ -7,6 +7,7 @@ import pandas as pd
 import re
 import requests
 import time
+import sys
 from selenium import webdriver
 from selenium.webdriver import ActionChains
 from selenium.common.exceptions import ElementNotInteractableException
@@ -14,6 +15,10 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
+
+file_name = sys.argv[1]
+launcher_path = sys.argv[2]
+search_query = sys.argv[3]
 
 user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/114.0'
 firefox_driver_path = os.path.join(os.getcwd(), 'drivers', 'geckodriver')
@@ -24,11 +29,10 @@ driver = webdriver.Firefox(service=firefox_service, options=firefox_option)
 driver.implicitly_wait(9)
 
 url = 'https://sanantonio.craigslist.org/'
-search_query = 'record player'
 
 source_name = os.path.splitext(f'{file_name}')[0]
 city_name = re.sub(r'cl_', '', source_name).replace('_', ' ').title()
-print(f"Scrapping {city_name} Craigslist...")
+print(f"Now getting {search_query}s from {city_name} Craigslist...")
 driver.get(url)
 
 for_sale = driver.find_element(By.XPATH, '/html/body/div[2]/section/div[3]/div[3]/div[2]/h3/a')
@@ -105,9 +109,14 @@ for posts_html in posts_html:
             if location.strip() == '':
                 location = f'{city_name} area'
 
+    os.umask(0o002)
     create_dir = f"{launcher_path}/images/cl_images"
-    if not os.path.exists(create_dir):
-        os.makedirs(create_dir)
+    if not (os.path.dirname(create_dir)):
+        try:
+            original_umask = os.umask(0)
+            os.makedirs(os.path.dirname(create_dir, mode=777))
+        finally:
+            os.umask(original_umask)
 
     image_url = posts_html.find('img').get('src') if posts_html.find('img') else ''
     image_path = ""
@@ -139,6 +148,7 @@ df = pd.DataFrame(craigslist_posts)
 timezone = pytz.timezone('Asia/Jakarta')
 current_time = datetime.datetime.now(timezone).strftime("%m/%d %H:%M:%S")
 df.insert(0, 'time_added', current_time)
+df.insert(0, 'is_new', "1")
 df.insert(0, 'source', f"{source_name}")
 df['image_path'] = image_paths
 df.dropna(inplace=True)
