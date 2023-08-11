@@ -4,7 +4,7 @@ import sys
 from email.mime.text import MIMEText
 from dotenv import load_dotenv
 
-launcher_path = sys.argv[2]
+launcher_path = sys.argv[1]
 
 load_dotenv()
 smpt_host = os.environ['SMPT_HOST']
