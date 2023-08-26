@@ -63,7 +63,7 @@ while not to_stop:
         current_gallery = current_url.split('#')[1] if '#' in current_url else None
         if current_gallery == prev_gallery:
             break
-    search_results = driver.find_element(By.XPATH, '/html/body/div[1]/main/div[2]/div[4]/ol')
+    search_results = driver.find_element(By.XPATH, '/html/body/div[1]/main/div/div[5]/ol')
     soup = BeautifulSoup(search_results.get_attribute('innerHTML'), 'html.parser')
     posts_html.extend(soup.find_all('li', {'class': 'cl-search-result'}))
     page_num = driver.find_element(By.CLASS_NAME, 'cl-page-number').text
@@ -75,7 +75,7 @@ while not to_stop:
 
     try:
         driver.execute_script('window.scrollTo(0, 0)')
-        button_next = driver.find_element(By.XPATH, '/html/body/div[1]/main/div[2]/div[1]/div[2]/button[3]')
+        button_next = driver.find_element(By.XPATH, '/html/body/div[1]/main/div/div[8]/div[1]/button[3]')
         button_next.click()
         time.sleep(1)
         if current_page == total_items:
