@@ -8,19 +8,25 @@ import re
 import requests
 import time
 import sys
+from urllib.parse import urlparse
 from selenium import webdriver
 from selenium.webdriver import ActionChains
 from selenium.common.exceptions import ElementNotInteractableException
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
+from selenium.common.exceptions import TimeoutException
 
 file_name = sys.argv[1]
 launcher_path = sys.argv[2]
 search_query = sys.argv[3]
+url = sys.argv[4]
 
-user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/114.0'
+page_load_timeout = 30
+
+user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/117.0'
 firefox_driver_path = os.path.join(os.getcwd(), 'drivers', 'geckodriver')
 firefox_service = Service(firefox_driver_path, log_path=os.path.devnull)
 firefox_option = Options()
@@ -28,12 +34,19 @@ firefox_option.set_preference('general.useragent.override', user_agent)
 driver = webdriver.Firefox(service=firefox_service, options=firefox_option)
 driver.implicitly_wait(9)
 
-url = 'https://houston.craigslist.org/'
+parsed_url = urlparse(url)
+parts_url = parsed_url.netloc.split('.')
+if len(parts_url) > 0:
+    city_name = parts_url[0].capitalize()
+source_name = f'craigslist_{parts_url[0]}'
+print(f"Fetching {search_query}s from {city_name} Craigslist...")
 
-source_name = os.path.splitext(f'{file_name}')[0]
-city_name = re.sub(r'cl_', '', source_name).replace('_', ' ').title()
-print(f"Now getting {search_query}s from {city_name} Craigslist...")
-driver.get(url)
+try:
+    driver.set_page_load_timeout(page_load_timeout)
+    driver.get(url)
+except TimeoutException as e:
+    driver.close()
+    raise TimeoutError(f"Selenium timed out waiting for the page to load: {e}")
 
 for_sale = driver.find_element(By.XPATH, '/html/body/div[2]/section/div[3]/div[3]/div[2]/h3/a')
 for_sale.click()
@@ -72,6 +85,9 @@ while not to_stop:
     if match:
         current_page = int(match.group(1).replace(',', ''))
         total_items = int(match.group(2).replace(',', ''))
+    if posts_html ==[]:
+        driver.close()
+        raise NoSuchElementException("No listings found on the page. Check if the page loaded properly.")
 
     try:
         driver.execute_script('window.scrollTo(0, 0)')
@@ -82,8 +98,13 @@ while not to_stop:
             to_stop = True
         else:
             to_stop = False
+
     except ElementNotInteractableException:
         to_stop = True
+
+    except NoSuchElementException as e:
+        print(f"Error: {e}")
+        break
 
 print('Collected {0} listings'.format(len(posts_html)))
 
