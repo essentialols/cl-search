@@ -8,6 +8,7 @@ import re
 import requests
 import time
 import sys
+import logging
 from urllib.parse import urlparse
 from selenium import webdriver
 from selenium.webdriver import ActionChains
@@ -15,30 +16,49 @@ from selenium.common.exceptions import ElementNotInteractableException
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.firefox.service import Service
-from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 file_name = sys.argv[1]
 launcher_path = sys.argv[2]
 search_query = sys.argv[3]
 url = sys.argv[4]
 
-page_load_timeout = 30
-
-user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/117.0'
-firefox_driver_path = os.path.join(os.getcwd(), 'drivers', 'geckodriver')
-firefox_service = Service(firefox_driver_path, log_path=os.path.devnull)
-firefox_option = Options()
-firefox_option.set_preference('general.useragent.override', user_agent)
-driver = webdriver.Firefox(service=firefox_service, options=firefox_option)
-driver.implicitly_wait(9)
-
 parsed_url = urlparse(url)
 parts_url = parsed_url.netloc.split('.')
 if len(parts_url) > 0:
     city_name = parts_url[0].capitalize()
 source_name = f'craigslist_{parts_url[0]}'
+
+timezone = pytz.timezone('Asia/Jakarta')
+current_time = datetime.datetime.now(timezone).strftime("%Y-%m-%d %H:%M")
+
+page_load_timeout = 60
+
+logger = logging.getLogger(f"cl_{city_name}_logger")
+logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler(f"{launcher_path}/temp/{source_name}.log")
+logger.addHandler(handler)
+handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s Selenium -> %(message)s", "%Y-%m-%d %H:%M:%S"))
+
+user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/117.0'
+driver_service = Service(log_output=f'{launcher_path}/temp/{source_name}.log')
+driver_option = Options()
+driver_option.add_argument("--headless=new")
+driver_option.add_argument(f'--user-agent={user_agent}')
+driver_option.add_argument("--disable-notifications")
+driver_option.add_argument('--disable-dev-shm-usage')
+driver_option.add_argument('--no-sandbox')
+driver = webdriver.Chrome(options=driver_option, service=driver_service)
+
+driver.implicitly_wait(9)
+driver.set_window_size(1280, 1000)
+window_handles = driver.window_handles
+wait = WebDriverWait(driver, 30)
+
 print(f"Fetching {search_query}s from {city_name} Craigslist...")
 
 try:
@@ -48,22 +68,23 @@ except TimeoutException as e:
     driver.close()
     raise TimeoutError(f"Selenium timed out waiting for the page to load: {e}")
 
-for_sale = driver.find_element(By.XPATH, '/html/body/div[2]/section/div[3]/div[3]/div[2]/h3/a')
+for_sale = wait.until(EC.visibility_of_element_located((By.XPATH, '//a[@href="/search/sss"]')))
 for_sale.click()
-time.sleep(8)
-search_field = driver.find_element(By.XPATH, '/html/body/div[1]/main/form/div[1]/div/div/input')
+search_field = wait.until(EC.visibility_of_element_located((By.XPATH, '//input[@placeholder="search for sale"]')))
 search_field.clear()
 search_field.send_keys(search_query)
 search_field.send_keys(Keys.ENTER)
-time.sleep(5)  # If you start getting "ValueError:" "Expected axis has 0 elements" increase time.sleep
+wait.until(EC.visibility_of_element_located((By.XPATH, '/html/body/div[1]/main/div/div[5]/ol')))
+time.sleep(1)
 
-posts_html = []
+posts_data = []
+scraped_img_tag_src = set()
 to_stop = False
 current_page = 0
 total_items = 0
 
-scroll_pause_time = .7  # if current_gallery == prev_gallery before it reaches the end of the page increase this
-scroll_offset = 1200
+scroll_pause_time = .8  # if current_gallery == prev_gallery before it reaches the end of the page increase this
+scroll_offset = 1000
 actions = ActionChains(driver)
 
 while not to_stop:
@@ -78,14 +99,21 @@ while not to_stop:
             break
     search_results = driver.find_element(By.XPATH, '/html/body/div[1]/main/div/div[5]/ol')
     soup = BeautifulSoup(search_results.get_attribute('innerHTML'), 'html.parser')
-    posts_html.extend(soup.find_all('li', {'class': 'cl-search-result'}))
+    for div in soup.find_all('li', {'class': 'cl-search-result'}):
+        img_tag = div.find('img')
+        if img_tag:
+            img_tag_src = img_tag.get('src')
+            if img_tag_src not in scraped_img_tag_src:
+                posts_data.extend(div)
+                scraped_img_tag_src.add(img_tag_src)
+
     page_num = driver.find_element(By.CLASS_NAME, 'cl-page-number').text
     pattern = r'([\d,]+)\s*of\s*([\d,]+)'
     match = re.search(pattern, page_num)
     if match:
         current_page = int(match.group(1).replace(',', ''))
         total_items = int(match.group(2).replace(',', ''))
-    if posts_html ==[]:
+    if posts_data == []:
         driver.close()
         raise NoSuchElementException("No listings found on the page. Check if the page loaded properly.")
 
@@ -106,15 +134,21 @@ while not to_stop:
         print(f"Error: {e}")
         break
 
-print('Collected {0} listings'.format(len(posts_html)))
+#with open(f'{launcher_path}/temp/{source_name}_posts_html.txt', 'w', encoding='utf-8') as file:
+#    for div in posts_data:
+#        file.write(str(div) + '\n')
 
-CraigslistPost = namedtuple('CraigslistPost',
-                            ['title', 'price', 'post_timestamp', 'location', 'post_url', 'image_url', 'data_pid'])
+print('Collected {0} listings'.format(len(posts_data)))
+
+CL_item = namedtuple('CL_item',
+                            ['title', 'price', 'post_timestamp', 'location', 'post_url', 'image_url'])
 craigslist_posts = []
 image_paths = []
+image_counter = 0
+total_images = len(posts_data)
 default_image_path = f"{launcher_path}/images/no_image.png"
 
-for posts_html in posts_html:
+for posts_html in posts_data:
     title = getattr(posts_html.find('a', 'posting-title'), 'text', None)
     price_element = posts_html.find('span', 'priceinfo')
     price = price_element.text.strip() if price_element is not None else 'Price not given'
@@ -130,17 +164,13 @@ for posts_html in posts_html:
             if location.strip() == '':
                 location = f'{city_name} area'
 
-    os.umask(0o002)
     create_dir = f"{launcher_path}/images/cl_images"
-    if not (os.path.dirname(create_dir)):
-        try:
-            original_umask = os.umask(0)
-            os.makedirs(os.path.dirname(create_dir, mode=777))
-        finally:
-            os.umask(original_umask)
+    if not os.path.exists(create_dir):
+        os.makedirs(create_dir)
 
     image_url = posts_html.find('img').get('src') if posts_html.find('img') else ''
     image_path = ""
+    image_counter += 1
 
     if image_url:
         image_file_name = image_url.split("/")[-1]
@@ -151,28 +181,28 @@ for posts_html in posts_html:
             if response.status_code == 200:
                 with open(image_path, "wb") as file:
                     file.write(response.content)
-                    print(f"Image downloaded: {image_path}")
+                    print(f"Image downloaded ({image_counter}/{total_images}): {image_path}")
         else:
-            print(f"Image already exists: {image_path}")
+            print(f"Image already exists ({image_counter}/{total_images}): {image_path}")
     else:
         image_path = f'{default_image_path}'
-        print("No image found: using default image")
+        print(f"No image found ({image_counter}/{total_images}): using default image")
     image_paths.append(image_path)
 
-    if image_url.strip() == '': # sometimes this errors out if the scroll_pause_time is too low
+    if image_url.strip() == '':  # sometimes this errors out if the scroll_pause_time is too low
         image_url = 'No image'
 
-    data_pid = posts_html.get('data-pid')
-    craigslist_posts.append(CraigslistPost(title, price, post_timestamp, location, post_url, image_url, data_pid))
+    craigslist_posts.append(CL_item(title, price, post_timestamp, location, post_url, image_url))
 
 df = pd.DataFrame(craigslist_posts)
-timezone = pytz.timezone('Asia/Jakarta')
-current_time = datetime.datetime.now(timezone).strftime("%m/%d %H:%M:%S")
 df.insert(0, 'time_added', current_time)
 df.insert(0, 'is_new', "1")
 df.insert(0, 'source', f"{source_name}")
+df['data_pid'] = df['post_url'].str.extract(r'/(\d+)\.html$')
 df['image_path'] = image_paths
 df.dropna(inplace=True)
 df.to_csv(f'{launcher_path}/sheets/{source_name}.csv', index=False)
 print(f"Created {source_name}.csv")
 driver.close()
+driver.quit()
+

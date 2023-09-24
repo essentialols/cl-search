@@ -2,11 +2,20 @@ import os
 import pandas as pd
 import requests
 import sys
+import logging
+from urllib.parse import urlparse
 
 launcher_path = sys.argv[2]
 
 csv_sheets_fold = f"{launcher_path}/filtered"
 cl_images_fold = f"{launcher_path}/images/cl_images"
+
+logger = logging.getLogger("remove_images_logger")
+logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler(f"{launcher_path}/temp/remove_extra_images.log")
+logger.addHandler(handler)
+handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s", "%Y-%m-%d %H:%M:%S"))
+
 
 def get_image_paths_from_csv(csv_file):
     image_paths = set()
@@ -17,12 +26,14 @@ def get_image_paths_from_csv(csv_file):
             image_paths.update(valid_paths['image_path'].tolist())
     return list(image_paths)
 
+
 def get_all_image_files(folder_path):
     image_files = []
     for file in os.listdir(folder_path):
         if file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
             image_files.append(os.path.join(folder_path, file))
     return image_files
+
 
 def main():
     all_image_paths = []
@@ -55,6 +66,7 @@ def main():
                 reloaded_image_paths.extend(get_image_paths_from_csv(csv_file))
 
     missing_images = list(set(reloaded_image_paths) - set(all_images))
+    image_counter = 0
 
     if missing_images:
         missing_image_urls = {}
@@ -71,24 +83,29 @@ def main():
                                 if not matching_row.empty:
                                     missing_image_urls[missing_image_path] = matching_row['image_url'].iloc[0]
                                     break
-
+        total_images = len(missing_image_urls)
         for missing_image_path, image_url in missing_image_urls.items():
-            image_filename = image_url.split('/')[-1]
+            parsed_image_url = urlparse(image_url)
+            image_path_parsed = parsed_image_url.path
+            cleaned_image_path = image_path_parsed.split('?')[0]
+            image_filename = os.path.basename(cleaned_image_path)
             image_path = os.path.join(cl_images_fold, image_filename)
+            image_counter += 1
 
             if not os.path.exists(image_path):
                 response = requests.get(image_url)
                 if response.status_code == 200:
                     with open(image_path, 'wb') as img_file:
                         img_file.write(response.content)
-                    print(f"Downloaded missing image: {image_path}")
+                    print(f"Downloaded missing image ({image_counter}/{total_images}): {image_path}")
                 else:
-                    print(f"Failed to download image from URL: {image_url}")
+                    print(f"Failed to download image from URL ({image_counter}/{total_images}): {image_url}")
             else:
-                print(f"Image already exists: {image_path}")
+                print(f"Image already exists ({image_counter}/{total_images}): {image_path}")
 
     else:
         print("Verification complete: No missing images found.")
 
-if __name__ == "__main__":
-    main()
+
+main()
+

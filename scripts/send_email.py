@@ -1,10 +1,18 @@
 import smtplib
 import os
 import sys
+import logging
 from email.mime.text import MIMEText
 from dotenv import load_dotenv
 
 launcher_path = sys.argv[1]
+
+logger = logging.getLogger("send_email_logger")
+logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler(f"{launcher_path}/temp/send_email.log")
+logger.addHandler(handler)
+handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s", "%Y-%m-%d %H:%M:%S"))
+
 
 load_dotenv()
 smpt_host = os.environ['SMPT_HOST']
@@ -32,21 +40,21 @@ def send_email(subject, message, sender_email, receiver_email, smtp_server, smtp
     except Exception as e:
         print(f"Failed to send email: {e}")
 
-if __name__ == "__main__":
 
-    with open(f'{launcher_path}/job_errors.log', 'r') as log_file:
-        log_content = log_file.read()
+with open(f'{launcher_path}/logs/job_error.log', 'r') as log_file:
+    log_content = log_file.read()
 
-        email_subject = "Job Failed"
-        email_message = f"This is an alert that job failed a number of times.\n\nLog contents:\n{log_content}"
+    email_subject = "Job Failed"
+    email_message = f"This is an alert that job failed a number of times.\n\nLog contents:\n{log_content}"
 
-    send_email(
-        subject=email_subject,
-        message=email_message,
-        sender_email=f"{sender_email}",
-        receiver_email=f"{receiver_email}",
-        smtp_server=f"{smpt_host}",
-        smtp_port=f"{smpt_port}",
-        smtp_username=f"{smpt_user}",
-        smtp_password=f"{smpt_pass}"
+send_email(
+    subject=email_subject,
+    message=email_message,
+    sender_email=f"{sender_email}",
+    receiver_email=f"{receiver_email}",
+    smtp_server=f"{smpt_host}",
+    smtp_port=f"{smpt_port}",
+    smtp_username=f"{smpt_user}",
+    smtp_password=f"{smpt_pass}"
     )
+
