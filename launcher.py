@@ -8,14 +8,35 @@ import pytz
 import shutil
 from urllib.parse import urlparse
 
+time.sleep(2)  # container delay
+
+###############################################################################
+
+max_attempts = 10
+search_query = "iphone"
+timezone = pytz.timezone('US/Central')
+initialize_mysql_tables = False
+delay_job = False
+# 10 to 15 minutes
+delay_in_minutes = 120
+delay_in_minutes_2 = 150
+run_it_once = False  # If False job will repeat based on delay_in_minutes.
+job_counter_max = 1   # You can customize the amount of times job will run before
+#                       breaking while run_it_once is true
+
+# Author: Gavin Kondrath | gav.ink
+###############################################################################
+
+utc_now = datetime.datetime.now(tz=pytz.timezone('UTC'))
+current_time = utc_now.astimezone(timezone).strftime("(%Y-%m-%d %H:%M)")
+time_file = utc_now.astimezone(timezone).strftime("%Y%m%d%H%M%S")
+
 launcher_path = os.path.dirname(os.path.abspath(__file__))
 scripts_folder = os.path.join(launcher_path, 'scripts')
 log_folder = f'{launcher_path}/logs'
 temp_folder = f'{launcher_path}/temp'
 job_error_log = f'{log_folder}/job_error.log'
 cl_urls = f'{launcher_path}/craigslist_urls.txt'
-
-time.sleep(2)
 
 if not os.path.exists(log_folder):
     os.makedirs(log_folder)
@@ -28,16 +49,8 @@ with open(job_error_log, 'w'):
 logging.basicConfig(filename=job_error_log, level=logging.DEBUG)
 print("Logging Setup Complete")
 
-#########################################
-max_attempts = 10
-search_query = "iPhone"
-timezone = pytz.timezone('Asia/Jakarta')
-#########################################
-
-current_time = datetime.datetime.now(timezone).strftime("(%Y-%m-%d %H:%M)")
-time_file = datetime.datetime.now(timezone).strftime("%Y%m%d%H%M%S")
-
 job_running = False
+job_counter = 0
 
 
 def clear_temp():
@@ -118,10 +131,22 @@ def run_craigslist_scripts(urls):
             print(f"Error running Craigslist script: {e}")
 
 
-def job():
+def job():  # 25.1MiB
     global job_running
+    global job_counter
+    job_counter += 1
     if not job_running:
         job_running = True
+        script_counter = 0
+
+        if initialize_mysql_tables is True:
+            print("Initializing MYSQL Tables in DB: webscrapes")
+            file_name = 'init_mysql.py'
+            url = 'example.com'  # Placeholder to get the script to run
+            script_path = os.path.join(scripts_folder, file_name)
+            run_script(script_path, file_name, launcher_path, search_query, url, max_retries=max_attempts)
+
+###############################################################################
 
         try:
             print("Starting Job...")
@@ -136,11 +161,10 @@ def job():
                 'to_mysql.py',
                 ]
 
-            url = 'https://www.craigslist.com/'
+###############################################################################
 
             script_paths = [os.path.join(scripts_folder, file_name) for file_name in ordered_scripts]
-
-            script_counter = 0
+            url = 'https://craigslist.org/'
 
             for script_path in script_paths:
                 script_counter += 1
@@ -157,10 +181,27 @@ def job():
 
         finally:
             clear_temp()
+            time.sleep(1)
             job_running = False
 
 
-job()
+if delay_job is False:
+    job()
+    if run_it_once is False:
+        schedule.every(delay_in_minutes).to(delay_in_minutes_2).minutes.do(job)
 
-schedule.every(60).to(90).minutes.do(job)
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
+
+if delay_job is True:
+    print(f"Waiting for {delay_in_minutes}-{delay_in_minutes_2} minutes before beginning")
+    schedule.every(delay_in_minutes).to(delay_in_minutes_2).minutes.do(job)
+
+    while True:
+        if run_it_once is True:
+            if job_counter == job_counter_max:
+                break
+        schedule.run_pending()
+        time.sleep(1)
 

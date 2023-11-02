@@ -11,14 +11,12 @@ import sys
 import logging
 from urllib.parse import urlparse
 from selenium import webdriver
+from selenium.common.exceptions import ElementNotInteractableException, NoSuchElementException, TimeoutException
 from selenium.webdriver import ActionChains
-from selenium.common.exceptions import ElementNotInteractableException
-from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
@@ -33,7 +31,7 @@ if len(parts_url) > 0:
     city_name = parts_url[0].capitalize()
 source_name = f'craigslist_{parts_url[0]}'
 
-timezone = pytz.timezone('Asia/Jakarta')
+timezone = pytz.timezone('US/Central')
 current_time = datetime.datetime.now(timezone).strftime("%Y-%m-%d %H:%M")
 
 page_load_timeout = 60
@@ -45,14 +43,13 @@ logger.addHandler(handler)
 handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s Selenium -> %(message)s", "%Y-%m-%d %H:%M:%S"))
 
 user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/117.0'
-driver_service = Service(log_output=f'{launcher_path}/temp/{source_name}.log')
+driver_path = f'{launcher_path}/drivers/firefox/geckodriver'
+driver_service = Service(driver_path, log_output=f'{launcher_path}/temp/{source_name}.log')
 driver_option = Options()
-driver_option.add_argument("--headless=new")
-driver_option.add_argument(f'--user-agent={user_agent}')
-driver_option.add_argument("--disable-notifications")
-driver_option.add_argument('--disable-dev-shm-usage')
-driver_option.add_argument('--no-sandbox')
-driver = webdriver.Chrome(options=driver_option, service=driver_service)
+driver_option.add_argument("-headless")
+driver_option.set_preference('general.useragent.override', user_agent)
+driver_option.set_preference("permissions.default.desktop-notification", 2)
+driver = webdriver.Firefox(options=driver_option, service=driver_service)
 
 driver.implicitly_wait(9)
 driver.set_window_size(1280, 1000)
@@ -71,6 +68,7 @@ except TimeoutException as e:
 for_sale = wait.until(EC.visibility_of_element_located((By.XPATH, '//a[@href="/search/sss"]')))
 for_sale.click()
 search_field = wait.until(EC.visibility_of_element_located((By.XPATH, '//input[@placeholder="search for sale"]')))
+time.sleep(2)  # test if this helps not collect all in sss
 search_field.clear()
 search_field.send_keys(search_query)
 search_field.send_keys(Keys.ENTER)
@@ -86,6 +84,11 @@ total_items = 0
 scroll_pause_time = .8  # if current_gallery == prev_gallery before it reaches the end of the page increase this
 scroll_offset = 1000
 actions = ActionChains(driver)
+
+
+def valid_url(url):
+    return url.startswith("http://") or url.startswith("https://")
+
 
 while not to_stop:
     while True:
@@ -177,11 +180,16 @@ for posts_html in posts_data:
         image_path = os.path.join(create_dir, image_file_name)
 
         if not os.path.exists(image_path):
-            response = requests.get(image_url)
-            if response.status_code == 200:
-                with open(image_path, "wb") as file:
-                    file.write(response.content)
-                    print(f"Image downloaded ({image_counter}/{total_images}): {image_path}")
+            if valid_url(image_url):
+                response = requests.get(image_url)
+                if response.status_code == 200:
+                    with open(image_path, "wb") as file:
+                        file.write(response.content)
+                        print(f"Image downloaded ({image_counter}/{total_images}): {image_path}")
+                else:
+                    print(f"Failed to download image ({image_counter}/{total_images}): {image_url}")
+            else:
+                print(f"Invalid url ({image_counter}/{total_images}): {image_url}")
         else:
             print(f"Image already exists ({image_counter}/{total_images}): {image_path}")
     else:
@@ -194,6 +202,10 @@ for posts_html in posts_data:
 
     craigslist_posts.append(CL_item(title, price, post_timestamp, location, post_url, image_url))
 
+sheets = f'{launcher_path}/sheets'
+if not os.path.exists(sheets):
+    os.makedirs(sheets)
+
 df = pd.DataFrame(craigslist_posts)
 df.insert(0, 'time_added', current_time)
 df.insert(0, 'is_new', "1")
@@ -201,8 +213,7 @@ df.insert(0, 'source', f"{source_name}")
 df['data_pid'] = df['post_url'].str.extract(r'/(\d+)\.html$')
 df['image_path'] = image_paths
 df.dropna(inplace=True)
-df.to_csv(f'{launcher_path}/sheets/{source_name}.csv', index=False)
+df.to_csv(f'{sheets}/{source_name}.csv', index=False)
 print(f"Created {source_name}.csv")
 driver.close()
 driver.quit()
-
