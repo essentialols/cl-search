@@ -3,6 +3,10 @@ import os
 import pandas as pd
 from dotenv import load_dotenv
 import sys
+import requests
+import time
+import hashlib
+import logging
 
 launcher_path = sys.argv[2]
 
@@ -12,6 +16,16 @@ db_port = os.environ['MYSQL_PORT']
 db_user = os.environ['MYSQL_USER']
 db_pass = os.environ['MYSQL_PASSWORD']
 db_database = os.environ['MYSQL_DB']
+cloud_name = os.environ['CLOUD_NAME']
+cloud_api_key = os.environ['CLOUD_API_KEY']
+cloud_api_secret = os.environ['CLOUD_API_SECRET']
+cloudinary_url = os.environ['CLOUDINARY_URL']
+
+logger = logging.getLogger("to_mysql_logger")
+logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler(f"{launcher_path}/temp/to_mysql.log")
+logger.addHandler(handler)
+handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s", "%Y-%m-%d %H:%M:%S"))
 
 db = mysql.connector.connect(
     user=f'{db_user}',
@@ -21,73 +35,13 @@ db = mysql.connector.connect(
     database=f'{db_database}'
 )
 
-def create_tables():
-    cursor = db.cursor()
-
-    create_sources_table = """
-    CREATE TABLE IF NOT EXISTS sources (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        source VARCHAR(255) UNIQUE
-    )
-    """
-
-    create_listings_table = """
-    CREATE TABLE IF NOT EXISTS listings (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        time_added TIMESTAMP,
-        title VARCHAR(255),
-        price VARCHAR(255),
-        post_timestamp VARCHAR(255),
-        location VARCHAR(255),
-        post_url VARCHAR(255),
-        image_url VARCHAR(255),
-        data_pid VARCHAR(255) UNIQUE,
-        image_path VARCHAR(255),
-        is_new TINYINT(1) DEFAULT 1
-    )
-    """
-
-    create_archived_listings_table = """
-    CREATE TABLE IF NOT EXISTS archived_listings (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        time_added TIMESTAMP,
-        title VARCHAR(255),
-        price VARCHAR(255),
-        post_timestamp VARCHAR(255),
-        location VARCHAR(255),
-        post_url VARCHAR(255),
-        image_url VARCHAR(255),
-        data_pid VARCHAR(255),
-        image_path VARCHAR(255),
-        is_new TINYINT(1) DEFAULT 1
-    )
-    """
-
-    create_data_sources_table = """
-    CREATE TABLE IF NOT EXISTS data_sources (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        data_pid_id INT,
-        source_id INT,
-        FOREIGN KEY (source_id) REFERENCES sources(id),
-        FOREIGN KEY (data_pid_id) REFERENCES listings(id) ON DELETE CASCADE,
-        UNIQUE (data_pid_id, source_id)
-    )
-    """
-
-    cursor.execute(create_sources_table)
-    cursor.execute(create_listings_table)
-    cursor.execute(create_archived_listings_table)
-    cursor.execute(create_data_sources_table)
-    db.commit()
-
 csv_folder = f"{launcher_path}/filtered"
 
 all_rows = []
 unique_data_pids = set()
 
-create_tables()
-
 cursor = db.cursor()
+
 
 def count_and_insert_sources(cursor, csv_folder):
     csv_files = [file for file in os.listdir(csv_folder) if file.endswith('.csv')]
@@ -95,6 +49,35 @@ def count_and_insert_sources(cursor, csv_folder):
     for csv_file in csv_files:
         source_name = os.path.splitext(csv_file)[0]
         cursor.execute("INSERT INTO sources (source) VALUES (%s) ON DUPLICATE KEY UPDATE source=source", (source_name,))
+
+
+def request_deletion(public_id, index, total_images):
+    cleaned_public_id = public_id[0].strip("'")  # errors if none
+    timestamp = int(time.time())
+    signature_data = f"public_id={cleaned_public_id}&timestamp={timestamp}{cloud_api_secret}"
+    signature = hashlib.sha1(signature_data.encode()).hexdigest()
+    cloudinary_url_with_params = f"{cloudinary_url}/destroy"
+    cloudinary_request = {
+        "public_id": cleaned_public_id,
+        "api_key": cloud_api_key,
+        "signature": signature,
+        "timestamp": timestamp
+        }
+
+    if public_id == "no_image.png":
+        print(f"Skipping no_image.png ({index}/{total_images})")
+
+    else:
+        try:
+            response = requests.post(cloudinary_url_with_params, data=cloudinary_request)
+            if response.status_code == 200:
+                print(f"Cloudinary image successfully deleted ({index}/{total_images}): {public_id}")
+            else:
+                print(f"Error deleting Cloudinary image ({index}/{total_images}): {public_id}. Status code:", response.status_code)
+                print("Error Response:", response.content)
+        except Exception as e:
+            print(f"Caught exception when deleting images from Cloudinary ({index}/{total_images}): {public_id}", str(e))
+
 
 count_and_insert_sources(cursor, csv_folder)
 
@@ -122,12 +105,16 @@ for data_pid in unique_data_pids:
                 price=%s,
                 post_timestamp=%s,
                 location=%s,
+                post_url=%s,
                 image_url=%s,
                 image_path=%s,
                 is_new = %s
             WHERE data_pid=%s
             """
-            cursor.execute(update_query, (row['title'], row['price'], row['post_timestamp'], row['location'], row['image_url'], row['image_path'], 0, data_pid))
+            cursor.execute(update_query, (
+                row['title'], row['price'], row['post_timestamp'], row['location'], row['post_url'], row['image_url'], row['image_path'],
+                0,
+                data_pid))
         else:
             insert_query = """
             INSERT INTO listings (
@@ -143,7 +130,7 @@ for data_pid in unique_data_pids:
                 is_new
             )
             VALUES (
-                NOW(),
+                %s,
                 %s,
                 %s,
                 %s,
@@ -157,6 +144,7 @@ for data_pid in unique_data_pids:
             """
 
             cursor.execute(insert_query, (
+                row['time_added'],
                 row['title'],
                 row['price'],
                 row['post_timestamp'],
@@ -173,14 +161,80 @@ for data_pid in unique_data_pids:
 for row in all_rows:
     data_pid = row['data_pid']
 
-    cursor.execute("INSERT INTO data_sources (data_pid_id, source_id) VALUES ((SELECT id FROM listings WHERE data_pid=%s), (SELECT id FROM sources WHERE source=%s)) ON DUPLICATE KEY UPDATE source_id=source_id", (data_pid, row['source']))
+    cursor.execute(
+        'INSERT INTO data_sources (data_pid_id, source_id) VALUES ((SELECT id FROM listings WHERE data_pid=%s),'
+        ' (SELECT id FROM sources WHERE source=%s)) ON DUPLICATE KEY UPDATE source_id=source_id',
+        (data_pid, row['source']))
+    cursor.execute("INSERT IGNORE INTO cloudinary (data_pid_id) SELECT id FROM listings WHERE data_pid=%s", (data_pid,))
 
     db.commit()
 
 data_pid_values = [row['data_pid'] for row in all_rows]
-cursor.execute("INSERT INTO archived_listings SELECT * FROM listings WHERE data_pid NOT IN (%s)" % ",".join(["%s"] * len(data_pid_values)), data_pid_values)
-cursor.execute("DELETE FROM listings WHERE data_pid NOT IN (%s)" % ",".join(["%s"] * len(data_pid_values)), data_pid_values)
+
+cursor.execute("""
+    SELECT DISTINCT c.cloudinary_link FROM cloudinary c LEFT JOIN listings l ON l.id = c.data_pid_id
+    WHERE l.data_pid NOT IN (%s)""" % ",".join(["%s"] * len(data_pid_values)), data_pid_values)
+
+public_ids = cursor.fetchall()
+total_images = len(public_ids)
+
+if not public_ids:
+    print("There are no images to delete from Cloudinary.")
+
+else:
+    print(f"{total_images} images to delete from Cloudinary server.")
+    for index, public_id in enumerate(public_ids, start=1):
+        try:
+            public_id[0].strip("'")
+
+        except AttributeError:
+            print(f'Caught none type: {public_id}')
+            continue
+
+        request_deletion(public_id, index, total_images)
+
+cursor.execute("""INSERT INTO archived_listings SELECT * FROM listings
+    WHERE data_pid NOT IN (%s)""" % ",".join(["%s"] * len(data_pid_values)), data_pid_values)
+
+cursor.execute("DELETE FROM listings WHERE data_pid NOT IN (%s)" % ",".join(
+    ["%s"] * len(data_pid_values)), data_pid_values)
+
 db.commit()
+
+cloudinary_image_update = """
+   SELECT l.id, l.image_path, c.data_pid_id, c.cloudinary_link
+   FROM listings l
+   LEFT JOIN cloudinary c ON l.id = c.data_pid_id
+ """
+cursor.execute(cloudinary_image_update)
+cloudinary_links = cursor.fetchall()
+total_images = len(cloudinary_links)
+
+print("Checking if there are images to update")
+for index, row in enumerate(cloudinary_links, start=1):
+    image_path = row[1]
+    data_pid_id = row[2]
+    public_id = row[3]
+
+    if public_id is None:
+        continue
+
+    elif os.path.splitext(os.path.basename(image_path))[0] != public_id:
+        print(f"Updating image {public_id}")
+        request_deletion(public_id, index, total_images)
+
+        update_images = """
+            UPDATE cloudinary
+            SET cloudinary_link = NULL
+            WHERE data_pid_id = %s
+        """
+
+        cursor.execute(update_images, (data_pid_id,))
+        print(f"Updated data_pid_id in Cloudinary:{data_pid_id}")
+        db.commit()
+
+    else:
+        continue
 
 cursor.close()
 db.close()

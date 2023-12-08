@@ -57,4 +57,3 @@ send_email(
     smtp_username=f"{smpt_user}",
     smtp_password=f"{smpt_pass}"
     )
-

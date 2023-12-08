@@ -159,6 +159,7 @@ def job():  # 25.1MiB
                 'filter_csv.py',
                 'remove_extra_images.py',
                 'to_mysql.py',
+                'to_cloudinary.py'
                 ]
 
 ###############################################################################
@@ -204,4 +205,3 @@ if delay_job is True:
                 break
         schedule.run_pending()
         time.sleep(1)
-
