@@ -1,8 +1,6 @@
-import os
 import re
 import time
 
-import pandas as pd
 from bs4 import BeautifulSoup
 from driver import close_driver
 from driver import get_url
@@ -14,16 +12,14 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from utils import df_output
 from utils import get_current_time
-from utils import launcher_path
 from utils import parse_url
 from utils import selectors
 
 current_time = get_current_time()
 
 
-def navigate_to_category(link, search_query, browser_arg, headless_arg):
+def navigate_to_category(link, search_query, browser_arg, headless_arg, category_xpath):
     city_name = parse_url(link)
     driver = get_webdriver(browser_arg, headless_arg)
     wait = WebDriverWait(driver, 60)
@@ -31,16 +27,12 @@ def navigate_to_category(link, search_query, browser_arg, headless_arg):
 
     print(f"Fetching {search_query}s from {city_name.capitalize()} Craigslist...")
 
-    for_sale = wait.until(
-        EC.visibility_of_element_located(
-            (By.XPATH, selectors["selectors"]["links"]["for_sale"]["all"])
-        )
+    category = wait.until(
+        EC.visibility_of_element_located((By.XPATH, f"{category_xpath}"))
     )
-    for_sale.click()
+    category.click()
     search_field = wait.until(
-        EC.visibility_of_element_located(
-            (By.XPATH, selectors["selectors"]["for_sale"]["search"])
-        )
+        EC.visibility_of_element_located((By.XPATH, selectors["selectors"]["search"]))
     )
 
     if search_query:
@@ -48,9 +40,7 @@ def navigate_to_category(link, search_query, browser_arg, headless_arg):
         search_field.send_keys(search_query)
         search_field.send_keys(Keys.ENTER)
     wait.until(
-        EC.visibility_of_element_located(
-            (By.XPATH, selectors["selectors"]["for_sale"]["results"])
-        )
+        EC.visibility_of_element_located((By.XPATH, selectors["selectors"]["results"]))
     )
 
     # result_options = wait.until(EC.visibility_of_element_located((By.XPATH, selectors['selectors']['result_options']['box_button'])))
@@ -58,7 +48,7 @@ def navigate_to_category(link, search_query, browser_arg, headless_arg):
 
     # result_list = wait.until(EC.visibility_of_element_located((By.XPATH, selectors['selectors']['result_options']['list'])))
     # result_list.click()
-    # wait.until(EC.visibility_of_element_located((By.XPATH, selectors['selectors']['for_sale']['results'])))
+    # wait.until(EC.visibility_of_element_located((By.XPATH, selectors['selectors']['results'])))
 
     return driver
 
@@ -85,7 +75,7 @@ def get_listing_data(driver):
             if current_gallery == prev_gallery:
                 break
         search_results = driver.find_element(
-            By.XPATH, selectors["selectors"]["for_sale"]["results"]
+            By.XPATH, selectors["selectors"]["results"]
         )
         soup = BeautifulSoup(search_results.get_attribute("innerHTML"), "html.parser")
         for div in soup.find_all("li", {"class": "cl-search-result"}):
@@ -117,9 +107,7 @@ def get_listing_data(driver):
 
         try:
             driver.execute_script("window.scrollTo(0, 0)")
-            button_next = driver.find_element(
-                By.XPATH, selectors["selectors"]["for_sale"]["next"]
-            )
+            button_next = driver.find_element(By.XPATH, selectors["selectors"]["next"])
             button_next.click()
             time.sleep(1)
             if current_page == total_items:
@@ -138,19 +126,3 @@ def get_listing_data(driver):
     close_driver(driver)
 
     return posts_data
-
-
-def write_the_data_frames(link, craigslist_posts, make_images, output_arg):
-    city_name = parse_url(link)
-    sheets = f"{launcher_path}/sheets"
-    source_name = f"craigslist_{city_name}"
-
-    if not os.path.exists(sheets):
-        os.makedirs(sheets)
-
-    df = pd.DataFrame([x.as_dict() for x in craigslist_posts])
-    df.insert(0, "time_added", current_time)
-    df.insert(0, "is_new", "1")
-    df.insert(0, "source", f"{source_name}")
-    df.dropna(inplace=True)
-    df_output(df, city_name, output_arg)

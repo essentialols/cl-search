@@ -11,7 +11,8 @@
     - [Browser](#browser)
     - [Headless Mode](#headless)
     - [Search](#search)
-    - [image](#image)
+    - [Image](#image)
+    - [Category](#category)
 
 ## Features
 - Supports Chrome, Chromium, Edge, Firefox, & Safari
@@ -51,7 +52,7 @@ Examples:
 
 `-L 'Lower 48'`
 
-You can customize locations by appending to the end of the dict in `locations.py`
+*You can customize locations by appending to the end of the dict in `locations.py`*
 
 
 ### Output
@@ -73,7 +74,7 @@ Supports many different formats!
 - pickle
 - clipboard
 
-SQL support coming soon
+SQL support coming soon!
 
 <br>
 
@@ -93,7 +94,7 @@ or just use the extension for ease of use!
 
 **Export directly to clipboard!**
 
-*Linux users may need to install xclip or xsel (with PyQt5, PyQt4 or qtpy) for use*
+*Linux users may need to install xclip or xsel (with PyQt5, PyQt4 or qtpy) for use!*
 
 `-o clipboard`
 
@@ -101,7 +102,7 @@ or just use the extension for ease of use!
 
 **Defaults to Firefox**
 
-Supports Chrome, Chromium, Edge, Firefox, & Safari
+Supports Chrome, Chromium, Edge, Firefox, & Safari.
 
 `-b or --browser foo`
 
@@ -128,6 +129,34 @@ Query a search or take every listing!
 
 **False by Default**
 
-Downloads images from the listings
+Downloads images from the listings.
 
 `-i or --image`
+
+### Category
+
+**Default All for sale**
+
+Select the category or subcategory you wish to search in.
+
+`-C or --category 'foo bar'`
+
+*All categories are listed in `categories.py`*
+
+You can customize these categories by appending to the end of the dict.
+
+<br>
+
+**Some of my favorite categories are:**
+
+Free -  to search for free stuff.
+
+`-C free`
+
+Software -  to look for Software Engineering jobs.
+
+`-C software`
+
+Housing - to search for housing.
+
+`-C housing`

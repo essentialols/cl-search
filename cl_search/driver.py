@@ -12,9 +12,6 @@ from selenium.webdriver.safari.options import Options as SafariOptions
 from utils import selectors
 
 
-# add headless arg, ensure preferences work for each driver
-
-
 def get_webdriver(webdriver="chrome", headless=False, options=None):
     use_driver = set_driver(webdriver)
     options = options or set_options(webdriver, headless)
@@ -57,6 +54,7 @@ def chrome_driver_preferences(headless):
     user_agent = selectors["user_agent"]
 
     options = ChromeOptions()
+    options.add_argument(f"--user-agent={user_agent}")
 
     if headless:
         options.add_argument("-headless")
@@ -79,7 +77,9 @@ def firefox_driver_preferences(headless):
 
 def safari_driver_preferences(headless):
     user_agent = selectors["user_agent"]
+
     options = SafariOptions()
+    options.add_argument(f"--user-agent={user_agent}")
 
     if headless:
         options.add_argument("-headless")
@@ -89,7 +89,9 @@ def safari_driver_preferences(headless):
 
 def edge_driver_preferences(headless):
     user_agent = selectors["user_agent"]
+
     options = EdgeOptions()
+    options.add_argument(f"--user-agent={user_agent}")
 
     if headless:
         options.add_argument("-headless")
@@ -99,15 +101,15 @@ def edge_driver_preferences(headless):
 
 def chromium_driver_preferences(headless):
     user_agent = selectors["user_agent"]
+
     options = ChromiumOptions()
+    options.add_argument(f"--user-agent={user_agent}")
 
     if headless:
         options.add_argument("-headless")
 
     return options
 
-
-VALID_DRIVERS = ("chrome", "firefox", "safari", "edge", "chromium")
 
 drivers = {
     "chrome": webdriver.Chrome,

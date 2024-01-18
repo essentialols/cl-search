@@ -1,6 +1,10 @@
 user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/117.0'
 
 [selectors]
+    search = '//input[contains(@placeholder, "search")]'
+    results = "//div[contains(@class, 'results')]/ol"
+    next = "//div[contains(@class, 'bottom')]//button[contains(@class, 'cl-next-page')]"
+
     [selectors.links]
     resumes = '//a[@href="/search/rrr"]'
     event_calendar = '//a[@href="/search/eee"]'
@@ -153,11 +157,6 @@ user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/2010
         labor = '//a[@href="/search/lbg"]'
         talent = '//a[@href="/search/tlg"]'
         writing = '//a[@href="/search/wrg"]'
-
-    [selectors.for_sale]
-    search = '//input[@placeholder="search for sale"]'
-    results = "//div[contains(@class, 'results')]/ol"
-    next = "//div[contains(@class, 'bottom')]//button[contains(@class, 'cl-next-page')]"
 
     [selectors.result_options]
     box_button = "//button[contains(@class, 'cl-search-view-mode')]"

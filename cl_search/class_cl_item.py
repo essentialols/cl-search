@@ -1,8 +1,6 @@
-import os
 import re
 
 from utils import download_images
-from utils import launcher_path
 from utils import parse_url
 
 
@@ -234,10 +232,6 @@ class Thumb(CL_item):
             image_url = posts.find("img").get("src") if posts.find("img") else ""
 
             if make_images is True:
-                create_dir = f"{launcher_path}/images/cl_images"
-                if not os.path.exists(create_dir):
-                    os.makedirs(create_dir)
-
                 image_counter += 1
                 image_path = download_images(
                     image_url, image_paths, image_counter, total_images
@@ -326,6 +320,7 @@ class Preview(CL_item):
 
         craigslist_posts = []
         image_paths = []
+        attribute = []
         image_counter = 0
         total_images = len(posts_data)
 
@@ -370,10 +365,6 @@ class Preview(CL_item):
             image_urls = posts.find("img").get("src") if posts.find("img") else ""
 
             if make_images is True:
-                create_dir = f"{launcher_path}/images/cl_images"
-                if not os.path.exists(create_dir):
-                    os.makedirs(create_dir)
-
                 image_counter += 1
                 for image_url in image_urls:
                     image_paths = download_images(
@@ -482,10 +473,6 @@ class Grid(CL_item):
             image_url = posts.find("img").get("src") if posts.find("img") else ""
 
             if make_images is True:
-                create_dir = f"{launcher_path}/images/cl_images"
-                if not os.path.exists(create_dir):
-                    os.makedirs(create_dir)
-
                 image_counter += 1
                 image_path = download_images(
                     image_url, image_paths, image_counter, total_images
@@ -589,10 +576,6 @@ class Gallery(CL_item):
             image_url = posts.find("img").get("src") if posts.find("img") else ""
 
             if make_images is True:
-                create_dir = f"{launcher_path}/images/cl_images"
-                if not os.path.exists(create_dir):
-                    os.makedirs(create_dir)
-
                 image_counter += 1
                 image_path = download_images(
                     image_url, image_paths, image_counter, total_images

@@ -3,7 +3,6 @@ import logging
 import os
 from urllib.parse import urlparse
 
-import pandas as pd
 import pytz
 import requests
 import toml
@@ -11,6 +10,7 @@ from preferences import tz
 
 logger = logging.getLogger("cl_search")
 launcher_path = os.path.abspath(os.path.dirname(__file__))
+project_path = os.path.join(launcher_path, os.pardir)
 selectors = toml.load(os.path.join(launcher_path, "selectors.toml"))
 
 
@@ -50,12 +50,15 @@ def get_toml_data(toml, name):
 
 def download_images(image_url, image_paths, image_counter, total_images):
     image_path = ""
-    default_image_path = f"{launcher_path}/images/no_image.png"
-    create_dir = f"{launcher_path}/images/cl_images"
+    default_image_path = f"{project_path}/images/no_image.png"
+    cl_images_dir = f"{project_path}/images/cl_images"
+
+    if not os.path.exists(cl_images_dir):
+        os.makedirs(cl_images_dir)
 
     if image_url:
         image_file_name = image_url.split("/")[-1]
-        image_path = os.path.join(create_dir, image_file_name)
+        image_path = os.path.join(cl_images_dir, image_file_name)
 
         if not os.path.exists(image_path):
             if valid_url(image_url):
@@ -83,58 +86,6 @@ def download_images(image_url, image_paths, image_counter, total_images):
     image_paths.append(image_path)
 
     return image_paths
-
-
-def get_export_formats(df=pd.DataFrame):
-    # s = df.style()  # requires jinja2
-    export_formats_dict = {
-        "csv": (df.to_csv, "csv"),
-        "json": (df.to_json, "json"),
-        "html": (df.to_html, "html"),
-        # 'latex': (s.to_latex, 'tex'),
-        # 'tex': (s.to_latex, 'tex'),
-        "xml": (df.to_xml, "xml"),
-        "excel": (df.to_excel, "xlsx"),
-        "xlsx": (df.to_excel, "xlsx"),
-        "hdf5": (df.to_hdf, "h5"),
-        "hdf": (df.to_hdf, "h5"),
-        "h5": (df.to_hdf, "h5"),
-        "feather": (df.to_feather, "feather"),
-        "parquet": (df.to_parquet, "parquet"),
-        "orc": (df.to_orc, "orc"),
-        "stata": (df.to_stata, "dta"),
-        "dta": (df.to_stata, "dta"),
-        "pickle": (df.to_pickle, "pkl"),
-        "pkl": (df.to_pickle, "pkl"),
-    }
-
-    return export_formats_dict
-
-
-def df_output(df, city_name, output_arg="csv"):
-    # add 'sql' support
-    # add 'gbq' support
-    # add options for formats
-
-    export_formats = get_export_formats(df)
-    sheets = f"{launcher_path}/sheets"
-    source_name = f"craigslist_{city_name}"
-
-    if output_arg in export_formats:
-        function_name, file_extension = export_formats[output_arg]
-
-    if function_name:
-        output_file = f"{sheets}/{source_name}.{file_extension}"
-
-        function_name(output_file)
-        print(f"Created {source_name}.{file_extension}")
-
-    elif output_arg == "clipboard":
-        df.to_clipboard()
-        print("Ready to paste")
-
-    else:
-        print(f"Invalid output format or extension: {output_arg}.")
 
 
 def get_links_from_dict(location, hierarchy, links):
