@@ -9,10 +9,13 @@ from selenium.webdriver.edge.service import Service as EdgeService
 from selenium.webdriver.firefox.options import Options as GeckoOptions
 from selenium.webdriver.firefox.service import Service as GeckoService
 from selenium.webdriver.safari.options import Options as SafariOptions
-from utils import selectors
+
+from cl_search.utils import selectors
 
 
-def get_webdriver(webdriver="chrome", headless=False, options=None):
+def get_webdriver(
+    webdriver: str = "firefox", headless: bool = False, options=None
+) -> webdriver:
     use_driver = set_driver(webdriver)
     options = options or set_options(webdriver, headless)
     service = set_service(webdriver)
@@ -29,12 +32,12 @@ def get_webdriver(webdriver="chrome", headless=False, options=None):
     return driver
 
 
-def set_driver(webdriver):
+def set_driver(webdriver: str) -> webdriver:
     if webdriver in drivers:
         return drivers[webdriver]
 
 
-def set_options(webdriver, headless):
+def set_options(webdriver: str, headless: bool):
     try:
         if webdriver in preferences:
             return preferences[webdriver](headless)
@@ -43,14 +46,14 @@ def set_options(webdriver, headless):
         print(f"{webdriver} is not supported")
 
 
-def set_service(webdriver):
+def set_service(webdriver: str):
     if webdriver in services:
         return services[webdriver]()
 
     return None
 
 
-def chrome_driver_preferences(headless):
+def chrome_driver_preferences(headless: bool) -> ChromeOptions:
     user_agent = selectors["user_agent"]
 
     options = ChromeOptions()
@@ -62,7 +65,7 @@ def chrome_driver_preferences(headless):
     return options
 
 
-def firefox_driver_preferences(headless):
+def firefox_driver_preferences(headless: bool) -> GeckoOptions:
     user_agent = selectors["user_agent"]
 
     options = GeckoOptions()
@@ -75,7 +78,7 @@ def firefox_driver_preferences(headless):
     return options
 
 
-def safari_driver_preferences(headless):
+def safari_driver_preferences(headless: bool) -> SafariOptions:
     user_agent = selectors["user_agent"]
 
     options = SafariOptions()
@@ -87,7 +90,7 @@ def safari_driver_preferences(headless):
     return options
 
 
-def edge_driver_preferences(headless):
+def edge_driver_preferences(headless: bool) -> EdgeOptions:
     user_agent = selectors["user_agent"]
 
     options = EdgeOptions()
@@ -99,7 +102,7 @@ def edge_driver_preferences(headless):
     return options
 
 
-def chromium_driver_preferences(headless):
+def chromium_driver_preferences(headless: bool) -> ChromeOptions:
     user_agent = selectors["user_agent"]
 
     options = ChromiumOptions()
@@ -135,7 +138,7 @@ services = {
 }
 
 
-def get_url(driver, url):
+def get_url(driver: webdriver, url: str) -> None:
     page_load_timeout = 60
 
     try:
@@ -147,7 +150,7 @@ def get_url(driver, url):
         raise TimeoutError(f"Selenium timed out waiting for the page to load: {e}")
 
 
-def close_driver(driver=None):
+def close_driver(driver: webdriver = None) -> None:
     window_handles = driver.window_handles
     if driver:
         for handle in window_handles:

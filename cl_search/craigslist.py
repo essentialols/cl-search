@@ -2,9 +2,7 @@ import re
 import time
 
 from bs4 import BeautifulSoup
-from driver import close_driver
-from driver import get_url
-from driver import get_webdriver
+from selenium import webdriver
 from selenium.common.exceptions import ElementNotInteractableException
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver import ActionChains
@@ -12,14 +10,20 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from utils import get_current_time
-from utils import parse_url
-from utils import selectors
+
+from cl_search.driver import close_driver
+from cl_search.driver import get_url
+from cl_search.driver import get_webdriver
+from cl_search.utils import get_current_time
+from cl_search.utils import parse_url
+from cl_search.utils import selectors
 
 current_time = get_current_time()
 
 
-def navigate_to_category(link, search_query, browser_arg, headless_arg, category_xpath):
+def navigate_to_category(
+    link: str, search_query: str, browser_arg: str, headless_arg: bool, category_xpath
+) -> webdriver:
     city_name = parse_url(link)
     driver = get_webdriver(browser_arg, headless_arg)
     wait = WebDriverWait(driver, 60)
@@ -53,7 +57,7 @@ def navigate_to_category(link, search_query, browser_arg, headless_arg, category
     return driver
 
 
-def get_listing_data(driver):
+def get_listing_data(driver: webdriver) -> dict:
     posts_data = []
     scraped_img_tag_src = set()
     to_stop = False

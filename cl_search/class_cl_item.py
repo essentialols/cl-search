@@ -1,7 +1,7 @@
 import re
 
-from utils import download_images
-from utils import parse_url
+from cl_search.utils import download_images
+from cl_search.utils import parse_url
 
 
 class CL_item:
@@ -193,7 +193,6 @@ class Thumb(CL_item):
         city_name = parse_url(link)
 
         craigslist_posts = []
-        image_paths = []
         image_counter = 0
         total_images = len(posts_data)
 
@@ -233,9 +232,7 @@ class Thumb(CL_item):
 
             if make_images is True:
                 image_counter += 1
-                image_path = download_images(
-                    image_url, image_paths, image_counter, total_images
-                )
+                image_path = download_images(image_url, image_counter, total_images)
 
             else:
                 image_path = "No image path"
@@ -265,6 +262,7 @@ class Thumb(CL_item):
         return craigslist_posts
 
 
+# unfinished
 class Preview(CL_item):
     kind = "preview"
 
@@ -304,9 +302,9 @@ class Preview(CL_item):
             "location": self.location,
             "date": self.date,
             "post url": self.post_url,
-            "image url": self.image_url,
+            "image urls": self.image_urls,
             "post id": self.post_id,
-            "image path": self.image_path,
+            "image paths": self.image_paths,
             "post_description": self.post_description,
             "address_info": self.address_info,
             "attribute": self.attribute,
@@ -367,9 +365,8 @@ class Preview(CL_item):
             if make_images is True:
                 image_counter += 1
                 for image_url in image_urls:
-                    image_paths = download_images(
-                        image_url, image_paths, image_counter, total_images
-                    )
+                    image_path = download_images(image_url, image_counter, total_images)
+                    image_paths.append(image_path)
 
             else:
                 image_paths = "No image path"
@@ -442,7 +439,6 @@ class Grid(CL_item):
         city_name = parse_url(link)
 
         craigslist_posts = []
-        image_paths = []
         image_counter = 0
         total_images = len(posts_data)
 
@@ -474,9 +470,7 @@ class Grid(CL_item):
 
             if make_images is True:
                 image_counter += 1
-                image_path = download_images(
-                    image_url, image_paths, image_counter, total_images
-                )
+                image_path = download_images(image_url, image_counter, total_images)
 
             else:
                 image_path = "No image path"
@@ -545,7 +539,6 @@ class Gallery(CL_item):
         city_name = parse_url(link)
 
         craigslist_posts = []
-        image_paths = []
         image_counter = 0
         total_images = len(posts_data)
 
@@ -577,9 +570,7 @@ class Gallery(CL_item):
 
             if make_images is True:
                 image_counter += 1
-                image_path = download_images(
-                    image_url, image_paths, image_counter, total_images
-                )
+                image_path = download_images(image_url, image_counter, total_images)
 
             else:
                 image_path = "No image path"

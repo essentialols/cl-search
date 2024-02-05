@@ -6,7 +6,9 @@ from urllib.parse import urlparse
 import pytz
 import requests
 import toml
-from preferences import tz
+
+from cl_search.locations import VALID_LOCATIONS
+from cl_search.preferences import tz
 
 logger = logging.getLogger("cl_search")
 launcher_path = os.path.abspath(os.path.dirname(__file__))
@@ -21,7 +23,7 @@ def get_current_time():
     return current_time
 
 
-def parse_url(url):
+def parse_url(url: str) -> str:
     parsed_url = urlparse(url)
     parts_url = parsed_url.netloc.split(".")
     if (
@@ -36,19 +38,13 @@ def parse_url(url):
     return city_name
 
 
-def valid_url(url):
+def valid_url(url: str) -> str:
     return url.startswith("http://") or url.startswith("https://")
 
 
-def get_toml_data(toml, name):
-    for data in toml:
-        if data.get("name") == name:
-            return data
-
-    return None
-
-
-def download_images(image_url, image_paths, image_counter, total_images):
+def download_images(
+    image_url: str, image_counter: int = 0, total_images: int = 0
+) -> str:
     image_path = ""
     default_image_path = f"{project_path}/images/no_image.png"
     cl_images_dir = f"{project_path}/images/cl_images"
@@ -83,12 +79,10 @@ def download_images(image_url, image_paths, image_counter, total_images):
         image_path = f"{default_image_path}"
         print(f"No image found ({image_counter}/{total_images}): using default image")
 
-    image_paths.append(image_path)
-
-    return image_paths
+    return image_path
 
 
-def get_links_from_dict(location, hierarchy, links):
+def get_links_from_dict(location: str, hierarchy: dict, links) -> str:
     for key, value in hierarchy.items():
         if isinstance(value, str):
             links.append(value)
@@ -99,7 +93,7 @@ def get_links_from_dict(location, hierarchy, links):
                 return set(result)
 
 
-def get_links(location, hierarchy):
+def get_links(location: str, hierarchy: dict = VALID_LOCATIONS) -> str:
     links = []
 
     location = location.lower()

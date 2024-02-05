@@ -2,27 +2,27 @@ from __future__ import annotations
 
 import argparse
 
-from categories import VALID_CATEGORIES
-from class_cl_item import identify_cl_item_type
-from craigslist import get_listing_data
-from craigslist import navigate_to_category
-from driver import drivers
-from locations import VALID_LOCATIONS
-from utils import get_links
-from write_dataframes import get_export_formats
-from write_dataframes import write_frames
+from cl_search.categories import VALID_CATEGORIES
+from cl_search.class_cl_item import identify_cl_item_type
+from cl_search.craigslist import get_listing_data
+from cl_search.craigslist import navigate_to_category
+from cl_search.driver import drivers
+from cl_search.locations import VALID_LOCATIONS
+from cl_search.utils import get_links
+from cl_search.write_dataframes import get_export_formats
+from cl_search.write_dataframes import write_frames
 
 export_formats = get_export_formats()
 
 
 def run_script(
-    search_query,
-    browser_arg,
-    headless_arg,
-    image_arg,
-    output_arg,
-    cl_links,
-    category_xpath,
+    search_query: str,
+    browser_arg: str,
+    headless_arg: bool,
+    image_arg: bool,
+    output_arg: str,
+    cl_links: str or list,
+    category_xpath: str,
 ):
     run_times = 0
     for link in cl_links:
@@ -33,10 +33,10 @@ def run_script(
         )
         posts_data = get_listing_data(driver)
         craigslist_posts = identify_cl_item_type(link, posts_data, image_arg)
-        write_frames(link, craigslist_posts, image_arg, output_arg)
+        write_frames(link, craigslist_posts, output_arg)
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-L",
@@ -119,3 +119,7 @@ if __name__ == "__main__":
         cl_links,
         category_xpath,
     )
+
+
+if __name__ == "__main))":
+    main()

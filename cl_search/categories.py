@@ -1,4 +1,4 @@
-from utils import selectors
+from cl_search.utils import selectors
 
 VALID_CATEGORIES = {
     # community

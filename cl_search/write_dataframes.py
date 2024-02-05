@@ -1,19 +1,24 @@
 import os
 
 import pandas as pd
-from utils import get_current_time
-from utils import parse_url
-from utils import project_path
+
+from cl_search.utils import get_current_time
+from cl_search.utils import parse_url
+from cl_search.utils import project_path
 
 
-def get_export_formats(df=pd.DataFrame):
-    # s = df.style()  # requires jinja2
+def get_export_formats(df=pd.DataFrame) -> dict:
+    try:
+        import jinja2
+
+        jinja_available = True
+    except ImportError:
+        jinja_available = False
+
     export_formats_dict = {
         "csv": (df.to_csv, "csv"),
         "json": (df.to_json, "json"),
         "html": (df.to_html, "html"),
-        # 'latex': (s.to_latex, 'tex'),
-        # 'tex': (s.to_latex, 'tex'),
         "xml": (df.to_xml, "xml"),
         "excel": (df.to_excel, "xlsx"),
         "xlsx": (df.to_excel, "xlsx"),
@@ -29,10 +34,19 @@ def get_export_formats(df=pd.DataFrame):
         "pkl": (df.to_pickle, "pkl"),
     }
 
+    if jinja_available is True:
+        s = df.style  # requires jinja2
+        export_formats_dict.update(
+            {
+                "latex": (lambda: s.to_latex(), "tex"),
+                "tex": (lambda: s.to_latex(), "tex"),
+            }
+        )
+
     return export_formats_dict
 
 
-def df_output(df, city_name, output_arg="csv"):
+def df_output(city_name: str, df=pd.DataFrame, output_arg: str = "csv") -> None:
     # add 'sql' support
     # add 'gbq' support
     # add options for formats
@@ -61,7 +75,7 @@ def df_output(df, city_name, output_arg="csv"):
         print(f"Invalid output format or extension: {output_arg}.")
 
 
-def write_frames(link, craigslist_posts, make_images, output_arg):
+def write_frames(link: str, craigslist_posts: list, output_arg: str = "csv") -> None:
     city_name = parse_url(link)
     current_time = get_current_time()
     source_name = f"craigslist_{city_name}"
@@ -75,4 +89,4 @@ def write_frames(link, craigslist_posts, make_images, output_arg):
         df.set_index("post_id", inplace=True)
 
     df.dropna(inplace=True)
-    df_output(df, city_name, output_arg)
+    df_output(city_name, df, output_arg)

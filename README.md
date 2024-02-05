@@ -3,16 +3,22 @@
 <br>
 
 ## Table of contents
+- [Why?](#why)
 - [Features](#features)
 - [Installation](#installation)
+- [Getting Started](#getting-started)
 - [Commands](#Commands)
     - [Location](#location)
     - [Output](#output)
     - [Browser](#browser)
-    - [Headless Mode](#headless)
+    - [Headless Mode](#headless-mode)
     - [Search](#search)
     - [Image](#image)
     - [Category](#category)
+- [Contributing](#contributing)
+
+## Why
+My interest in web scraping began in 2018 when I was desperate to buy a [Modcan Dual Delay](https://www.modcan.com/emodules/dualdelay.html) for my Eurorack collection and stumbled across [WiggleHunt](https://wigglehunt.com/). Since then, I’ve found the utility of organizing used items for sale from across a variety of different websites genius. I built CL Search to solve this problem.
 
 ## Features
 - Supports Chrome, Chromium, Edge, Firefox, & Safari
@@ -27,6 +33,15 @@
 ```
 gh repo clone gavink97/cl-search .
 pip install --no-cache-dir -r requirements.txt
+pip install -e .
+```
+
+## Getting Started
+**Using the CLI**
+
+Use cl to begin your search:
+```
+cl -L austin
 ```
 
 ## Commands
@@ -45,7 +60,7 @@ Examples:
 
 `-L 'New York'`
 
-`-L https://austin.craigslist.org`
+`-L https://dallas.craigslist.org`
 
 
 🦅 Use Lower 48 to search thru the Contiguous US 🦅
@@ -107,7 +122,7 @@ Supports Chrome, Chromium, Edge, Firefox, & Safari.
 `-b or --browser foo`
 
 
-### Headless
+### Headless Mode
 
 **False by Default**
 
@@ -160,3 +175,10 @@ Software -  to look for Software Engineering jobs.
 Housing - to search for housing.
 
 `-C housing`
+
+
+## Contributing
+
+Contributions are welcomed to this project.
+
+Please take advantage of [pre-commit](https://pre-commit.com/) to lint and test your PRs before sending them to me :)
