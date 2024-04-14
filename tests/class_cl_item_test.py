@@ -137,14 +137,14 @@ def test_list_organize_listing_data(process_sample_data):
     if isinstance(craigslist_posts[0], (Thumb)):
         assert (
             craigslist_posts[0].image_url
-            == "https://images.craigslist.org/00000_iNU1yYVig1e_0CI0t2_50x50c.jpg"
+            == "https://images.craigslist.org/00000_iNU1yYVig1e_0CI0t2_600x450.jpg"
         )
         assert craigslist_posts[0].image_path == "No image path"
 
     if isinstance(craigslist_posts[0], (Preview)):
         assert (
             craigslist_posts[0].image_urls
-            == "https://images.craigslist.org/00000_iNU1yYVig1e_0CI0t2_50x50c.jpg"
+            == "https://images.craigslist.org/00000_iNU1yYVig1e_0CI0t2_600x450.jpg"
         )
         assert craigslist_posts[0].image_paths == "No image path"
         assert craigslist_posts[0].post_description == ""
@@ -154,7 +154,7 @@ def test_list_organize_listing_data(process_sample_data):
     if isinstance(craigslist_posts[0], (Grid, Gallery)):
         assert (
             craigslist_posts[0].image_url
-            == "https://images.craigslist.org/00000_iNU1yYVig1e_0CI0t2_300x300.jpg"
+            == "https://images.craigslist.org/00000_iNU1yYVig1e_0CI0t2_600x450.jpg"
         )
         assert craigslist_posts[0].image_path == "No image path"
 

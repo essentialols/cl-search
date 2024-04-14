@@ -36,13 +36,19 @@ def test_df_output(craigslist_posts):
     link = "https://austin.craigslist.org/"
     city_name = parse_url(link)
     output_arg = "csv"
+    location_arg = "austin"
+    search_query = "iphone"
+
     df = pd.DataFrame([x.as_dict() for x in craigslist_posts])
 
-    df_output(city_name, df, output_arg)
+    df_output(city_name, df, location_arg, search_query, output_arg)
 
 
 def test_write_frames(craigslist_posts):
     link = "https://austin.craigslist.org/"
     output_arg = "csv"
+    location_arg = "austin"
+    search_query = "iphone"
 
-    write_frames(link, craigslist_posts, output_arg)
+    write_frames(link, craigslist_posts, location_arg,
+                 search_query, output_arg)

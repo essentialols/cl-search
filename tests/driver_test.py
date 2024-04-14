@@ -110,7 +110,7 @@ def test_get_url():
     options = None
     driver = get_webdriver(browser, headless, options)
     url = "https://kent.craigslist.org/"
-    driver.get(url)
+    get_url(driver, url)
     close_driver(driver)
 
 

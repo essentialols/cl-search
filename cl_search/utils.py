@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os
+import re
 from urllib.parse import urlparse
 
 import pytz
@@ -16,13 +17,14 @@ project_path = os.path.join(launcher_path, os.pardir)
 selectors = toml.load(os.path.join(launcher_path, "selectors.toml"))
 
 
-def get_current_time():
+def get_current_time() -> datetime.datetime:
     timezone = pytz.timezone(tz)
     current_time = datetime.datetime.now(timezone).strftime("%Y-%m-%d %H:%M")
 
     return current_time
 
 
+# rename this function
 def parse_url(url: str) -> str:
     parsed_url = urlparse(url)
     parts_url = parsed_url.netloc.split(".")
@@ -38,18 +40,23 @@ def parse_url(url: str) -> str:
     return city_name
 
 
-def valid_url(url: str) -> str:
+def valid_url(url: str) -> bool:
     return url.startswith("http://") or url.startswith("https://")
 
 
-def download_images(
-    image_url: str, image_counter: int = 0, total_images: int = 0
-) -> str:
-    image_path = ""
+def parse_post_id(post_url: str) -> str:
+    post_id_search = re.search(r"/(\d+)\.html$", post_url)
+    if post_id_search:
+        post_id = post_id_search.group(1)
+
+    return post_id
+
+
+def download_images(image_url: str) -> str:
     default_image_path = f"{project_path}/images/no_image.png"
     cl_images_dir = f"{project_path}/images/cl_images"
 
-    if not os.path.exists(cl_images_dir):
+    if not os.path.isdir(cl_images_dir):
         os.makedirs(cl_images_dir)
 
     if image_url:
@@ -62,22 +69,16 @@ def download_images(
                 if response.status_code == 200:
                     with open(image_path, "wb") as file:
                         file.write(response.content)
-                        print(
-                            f"Image downloaded ({image_counter}/{total_images}): {image_path}"
-                        )
+                        print(f"Image downloaded: {image_path}")
                 else:
-                    print(
-                        f"Failed to download image ({image_counter}/{total_images}): {image_url}"
-                    )
+                    print(f"Failed to download image: {image_url}")
             else:
-                print(f"Invalid url ({image_counter}/{total_images}): {image_url}")
+                print(f"Invalid url: {image_url}")
         else:
-            print(
-                f"Image already exists ({image_counter}/{total_images}): {image_path}"
-            )
+            print(f"Image already exists: {image_path}")
     else:
         image_path = f"{default_image_path}"
-        print(f"No image found ({image_counter}/{total_images}): using default image")
+        print("No image found: using default image")
 
     return image_path
 
@@ -124,3 +125,14 @@ def get_links(location: str, hierarchy: dict = VALID_LOCATIONS) -> str:
                 return set(result)
 
     return links
+
+
+def delete_images(image_path: str) -> None:
+    if os.path.isfile(image_path):
+        os.remove(image_path)
+
+
+def split_url_size(url: str) -> str:
+    parts = url.split("_")
+    base_url = "_".join(parts[:-1])
+    return base_url

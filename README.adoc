@@ -1,0 +1,191 @@
+= cl search
+Gavin Kondrath <78187175+gavink97@users.noreply.github.com>
+v1.0, 2024-04-12
+:toc:
+:homepage: https://github.com/gavink97
+
+== Why
+
+My interest in web scraping began in 2018 when I was desperate to buy a
+https://www.modcan.com/emodules/dualdelay.html[Modcan Dual Delay] for my
+Eurorack collection and stumbled across https://wigglehunt.com/[WiggleHunt].
+Since then, I’ve found the utility of organizing used items for sale from
+across a variety of different websites genius. I built CL Search to solve this
+problem.
+
+== Features
+
+- Webdriver Agnostic: Supports Chrome, Chromium, Edge, Firefox, & Safari
+  Webdriver
+- Supports all Craigslist locations + categories
+- Supports a variety of formats to export data
+- Supports headless mode in all browsers
+- Full SQLite 3 support
+- Download images
+
+== Installation
+
+=== File tree
+
+....
+├── [cl_search]
+├── images
+│   ├── no_image.png
+│   └── cl_images
+├── sheets
+│   ├── foo_bar.json
+│   └── location_search_query.csv
+└── craigslist.db
+....
+
+=== Building from source
+
+....
+gh repo clone gavink97/cl-search .
+pip install -e cl-search
+....
+
+== Getting Started
+
+=== Using the CLI
+
+....
+ cl -s iphone -L austin --headless
+....
+
+== Commands
+
+=== Location
+
+*_Location is a required flag_*
+
+Supports URLs, City Names, States, Provinces, Countries, Continents, or
+Craigslist
+
+`-L or --location foo`
+
+*Examples:*
+
+`cl -L 'New York'`
+
+`cl -L https://dallas.craigslist.org`
+
+
+🦅 Use Lower 48 to search thru the Contiguous US 🦅
+
+`cl -L 'Lower 48'`
+
+*_You can customize locations by modifying or appending to the end of the dict
+in_* `locations.py`
+
+=== Output
+
+*_Default Output is CSV_*
+
+Currently supporting a few different formats:
+
+- csv
+- json
+- excel*
+- sqlite 3
+
+_*experimental or incomplete feature_
+
+`-o or --output foo`
+
+*Examples:*
+
+Simply type in the name of the format
+
+`cl -L foo -o json`
+
+or just use the extension for ease of use!
+
+`cl -L bar -o xlsx`
+
+=== Browser
+
+*_Defaults to Firefox_*
+
+Supports the following browsers:
+
+- Chrome
+- Chromium
+- Edge
+- Firefox
+- Safari.
+
+`-b or --browser foo`
+
+=== Headless mode
+
+*_False by Default_*
+
+Supports Headless mode in all major browsers!
+
+`--headless`
+
+=== Search
+
+*_No Default / Not Required_*
+
+Query a search or take every listing!
+
+`-s foo`
+
+`-s or --search 'foo bar'`
+
+=== Image
+
+*_False by Default_*
+
+Downloads images from the listings.
+
+`-i or --image`
+
+=== Category
+
+*_Default All for sale_*
+
+Select the category or subcategory you wish to search in.
+
+`-C or --category 'foo bar'`
+
+_All categories are listed in_ `categories.py`
+
+You can customize these categories by appending to the end of the dict.
+
+
+**Some of my favorite categories are:**
+
+Free -  to search for free stuff.
+
+`cl -L austin -C free`
+
+Software -  to look for Software Engineering jobs.
+
+`cl -L sf -C software`
+
+Housing - to search for housing.
+
+`cl -L nyc -C housing`
+
+== Contributing
+
+Contributions are welcomed to this project.
+
+Take advantage of https://pre-commit.com/[pre-commit] to lint and test your PRs
+before submission.
+
+== Road Map
+
+=== Planned additions
+* [x] Add SQL support
+* [ ] Views: Add support for Preview View (detailed view)
+* [ ] Output Path Arguement
+* [ ] Improve CLI Experience
+* [ ] Make simple python api
+
+=== Feature ideas
+* [ ] Filter Search
+* [ ] Spam filters

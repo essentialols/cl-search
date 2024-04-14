@@ -515,6 +515,7 @@ VALID_LOCATIONS = {
                         "Sacramento": "https://sacramento.craigslist.org/",
                         "San Diego": "https://sandiego.craigslist.org/",
                         "San Francisco": "https://sfbay.craigslist.org/",
+                        "SF": "https://sfbay.craigslist.org/",
                         "Bay Area": "https://sfbay.craigslist.org/",
                         "San Luis Obispo": "https://slo.craigslist.org/",
                         "Santa Barbara": "https://santabarbara.craigslist.org/",

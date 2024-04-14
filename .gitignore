@@ -1,0 +1,14 @@
+*.csv
+*.json
+*.db
+*.jpg
+*.jpg.icloud
+*.xlsx
+.DS_STORE*
+.git
+.venv
+__pycache__
+cl_search.egg-info
+dev
+housekeeping
+testing
