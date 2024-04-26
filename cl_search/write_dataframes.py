@@ -5,8 +5,8 @@ import pandas as pd
 from cl_search.database import create_session
 from cl_search.database import query_post_id
 from cl_search.database import setup_database
+from cl_search.utils import get_city_name
 from cl_search.utils import get_current_time
-from cl_search.utils import parse_url
 from cl_search.utils import project_path
 
 
@@ -99,45 +99,56 @@ def get_default_options() -> dict:
     return default_options_dict
 
 
-def df_output(city_name: str, df: pd.DataFrame, location_arg: str, search_query: str, output_arg: str, options: dict = None) -> None:
+def df_output(city_name: str, df: pd.DataFrame, options: dict = None, **kwargs) -> None:
+    # driver_options = kwargs.get("driver_options", None)
+    output = kwargs.get("output", "csv").lower()
+    location = kwargs.get("location")
+    file_extension = kwargs.get("file_extension")
+    search_query = kwargs.get("search_query", None).lower()
+
     source_name = f"craigslist_{city_name}"
     default_options = get_default_options()
     export_formats = get_export_formats(df)
 
     # remove sheet dir
+    # implement custom driver_options
 
     sheets = f"{project_path}/sheets"
 
     if not os.path.exists(sheets):
         os.makedirs(sheets)
 
-    if output_arg in export_formats:
-        function_name, file_extension, file_read = export_formats[output_arg]
+    if output in export_formats:
+        function_name, file_extension, file_read = export_formats[output]
 
-    if output_arg in default_options:
-        write_options, append_options, read_options = default_options[output_arg]
+    if output in default_options:
+        write_options, append_options, read_options = default_options[output]
 
     if options is None:
         options = append_options
+        # if driver_options is None:
+        #     options = append_options
+        # else:
+        #     options = driver_options
 
     if function_name:
-        output_file = f"{sheets}/{location_arg}_{search_query}.{file_extension}"
+        output_file = f"{sheets}/{location}_{search_query}.{file_extension}"
 
-        if output_arg == "clipboard":
+        if output == "clipboard":
             df.to_clipboard()
             print("Ready to paste")
 
-        elif output_arg == 'sql':
+        elif output == 'sql':
             if os.path.isfile(f'{project_path}/craigslist.db') is False:
                 db = setup_database()
-                query_post_id(db, df)
+                query_post_id(db, df, **kwargs)
 
             else:
                 session = create_session()
-                query_post_id(session, df)
+                query_post_id(session, df, **kwargs)
                 session.commit()
 
-        elif output_arg == 'excel':
+        elif output == 'excel':
             # fix excel not appending properly
             excel_writer_write, excel_writer_append, excel_writer_read = default_options[
                 "excel_writer"]
@@ -154,18 +165,20 @@ def df_output(city_name: str, df: pd.DataFrame, location_arg: str, search_query:
             function_name(output_file, **options)
 
     else:
-        print(f"Invalid output format or extension: {output_arg}.")
+        print(f"Invalid output format or extension: {options}.")
 
 
-def write_frames(link: str, craigslist_posts: list, location_arg: str, search_query: str, output_arg: str = "csv", options: dict = None) -> None:
-    city_name = parse_url(link)
+def write_frames(link: str, craigslist_posts: list, options: dict = None, **kwargs) -> None:
+    city_name = get_city_name(link)
     source_name = f"craigslist_{city_name}"
     current_time = get_current_time()
 
     df = pd.DataFrame([x.as_dict() for x in craigslist_posts])
+
+    df.insert(0, "last_updated", current_time)
     df.insert(0, "time_added", current_time)
-    df.insert(0, "is_new", "1")
+    df.insert(0, "is_new", 1)
     df.insert(0, "source", f"{source_name}")
 
     df.dropna(inplace=True)
-    df_output(city_name, df, location_arg, search_query, output_arg, options)
+    df_output(city_name, df, options, **kwargs)

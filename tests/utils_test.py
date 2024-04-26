@@ -1,15 +1,15 @@
 from cl_search.locations import VALID_LOCATIONS
 from cl_search.utils import download_images
+from cl_search.utils import get_city_name
 from cl_search.utils import get_links
 from cl_search.utils import parse_post_id
-from cl_search.utils import parse_url
 from cl_search.utils import project_path
 from cl_search.utils import split_url_size
 from cl_search.utils import valid_url
 
 
-def test_parse_url():
-    assert parse_url("https://kent.craigslist.org/") == "kent"
+def test_get_city_name():
+    assert get_city_name("https://kent.craigslist.org/") == "kent"
 
 
 def test_valid_url():

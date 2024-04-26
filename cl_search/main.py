@@ -10,52 +10,45 @@ from cl_search.locations import VALID_LOCATIONS
 from cl_search.utils import get_links
 from cl_search.write_dataframes import get_export_formats
 
-export_formats = get_export_formats()
 
+def main(**kwargs) -> None:
+    output = kwargs.get("output", "csv")
+    location_links = kwargs.get("location_links")
+    location = kwargs.get("location", "")
+    file_extension = kwargs.get("file_extension", "")
+    search_query = kwargs.get("search_query", "")
 
-def run_script(
-    search_query: str,
-    browser_arg: str,
-    headless_arg: bool,
-    image_arg: bool,
-    output_arg: str,
-    cl_links: str or list,
-    category_xpath: str,
-    location_arg: str
-):
-    if output_arg in export_formats:
-        function_name, file_extension, file_read = export_formats[output_arg]
+    count = 0
 
-    run_times = 0
-
-    for link in cl_links:
-        run_times += 1
-        print(f"Running Script {run_times}/{len(cl_links)}.")
-        driver = navigate_to_category(
-            link, search_query, browser_arg, headless_arg, category_xpath
-        )
+    for link in location_links:
+        count += 1
+        print(f"Running Script {count}/{len(location_links)}.")
+        driver = navigate_to_category(link, **kwargs)
 
         try:
-            get_listing_data(link, driver, image_arg,
-                             output_arg, location_arg, search_query)
+            get_listing_data(link, driver, **kwargs)
 
         except TimeoutError as e:
             print(f"Timeout error occurred for URL: {link}. Error: {e}")
 
-    # this is where we can sum and combine dataframes for outputs that don't append
-    if output_arg == "clipboard":
+    if output == "clipboard":
         # send post data to clipboard
-        pass
+        print("Data is ready to paste")
 
-    elif output_arg == "sql":
+    elif output == "sql":
         print(f"Created craigslist.{file_extension}")
 
     else:
-        print(f"Created {location_arg}.{file_extension}")
+        if search_query:
+            print(f"Created {location}_{search_query}.{file_extension}")
+        else:
+            print(f"Created {location}.{file_extension}")
 
 
-def main():
+def parse_my_args() -> dict:
+    export_formats = get_export_formats()
     parser = argparse.ArgumentParser()
+
     parser.add_argument(
         "-L",
         "--location",
@@ -63,7 +56,7 @@ def main():
         type=str,
         default="",
         required=True,
-        help="Location: Choose a URL, City Name, State / Province, Country, or Continent",
+        help="Location: URL, City, State, Province, Country, or Continent.",
     )
     parser.add_argument(
         "-o",
@@ -71,7 +64,7 @@ def main():
         type=str.lower,
         choices=export_formats.keys(),
         default="csv",
-        help="Output: CSV, EXCEL, ETC",
+        help="Output: CSV, JSON, EXCEL or SQL",
     )
     parser.add_argument(
         "-b",
@@ -79,19 +72,19 @@ def main():
         type=str.lower,
         choices=drivers.keys(),
         default="firefox",
-        help="Driver: Firefox, Chrome, Safari, Chromium",
+        help="Driver: Firefox, Chrome, Safari, Chromium, or Edge.",
     )
     parser.add_argument(
         "--headless",
         action="store_true",
         default=False,
-        help="Headless mode: True or False",
+        help="Headless mode",
     )
     parser.add_argument(
         "-s",
         "--search",
         action="store",
-        type=str,
+        type=str.lower,
         default="",
         help="Search query: Whatcha lookin for?",
     )
@@ -100,7 +93,7 @@ def main():
         "--image",
         action="store_true",
         default=False,
-        help="Images: Download images",
+        help="Download images",
     )
     parser.add_argument(
         "-C",
@@ -110,42 +103,89 @@ def main():
         default="sale",
         help="Category: Select the category to search in.",
     )
+    parser.add_argument(
+        "path",
+        type=str,
+        nargs="?",
+        help="Custom Output path",
+    )
+    parser.add_argument(
+        "-D",
+        "--delete",
+        action="store_true",
+        default=False,
+        help="Remove old data from SQL Tables",
+    )
+    parser.add_argument(
+        "-d",
+        "--detailed",
+        action="store_true",
+        default=False,
+        help="Use Detailed to get the most data possible",
+    )
+    parser.add_argument(
+        "-do",
+        "--driver-options",
+        type=str,
+        default="",
+        help="Custom driver options",
+    )
     args = parser.parse_args()
     sql = ["sql", "sqlite", "db"]
 
-    location_arg = args.location
-    output_arg = args.output
-    browser_arg = args.browser
-    headless_arg = args.headless
+    location = args.location
+    output = args.output
+    browser = args.browser
+    headless_mode = args.headless
     search_query = args.search
-    image_arg = args.image
-    category_arg = args.category
+    images_mode = args.image
+    category = args.category
+    # output_path = args.path
+    delete_mode = args.delete
+    # detailed_mode = args.detailed
+    # driver_options = args.driver_options
 
-    cl_links = get_links(location_arg, VALID_LOCATIONS)
+    location_links = get_links(location, VALID_LOCATIONS)
 
-    if category_arg in VALID_CATEGORIES:
-        category_xpath = VALID_CATEGORIES[category_arg]
+    if category in VALID_CATEGORIES:
+        category_choice = VALID_CATEGORIES[category]
 
-    if cl_links == []:
-        raise argparse.ArgumentTypeError(f"Invalid location: {location_arg}")
+    if location_links == []:
+        raise argparse.ArgumentTypeError(f"Invalid location: {location}")
 
-    if output_arg in sql:
-        output_arg = "sql"
+    if output in sql:
+        output = "sql"
 
-    if output_arg == 'xlsx':
-        output_arg = 'excel'
+    if output == 'xlsx':
+        output = 'excel'
 
-    run_script(
-        search_query,
-        browser_arg,
-        headless_arg,
-        image_arg,
-        output_arg,
-        cl_links,
-        category_xpath,
-        location_arg
-    )
+    if output in export_formats:
+        function_name, file_extension, file_read = export_formats[output]
+
+    return {
+        'search_query': search_query,
+        'browser': browser,
+        'headless_mode': headless_mode,
+        'images_mode': images_mode,
+        'output': output,
+        'location_links': location_links,
+        'category_choice': category_choice,
+        'location': location,
+        # 'output_path': output_path,
+        'delete_mode': delete_mode,
+        # 'detailed_mode': detailed_mode,
+        # 'driver_options': driver_options,
+        'function_name': function_name,
+        'file_extension': file_extension,
+        'file_read': file_read
+    }
 
 
-if __name__ == "__main__":
-    main()
+def run() -> None:
+    args = parse_my_args()
+    main(**args)
+
+
+# does not run as __main__ and I dont know why
+if __name__ == '__main__':
+    run()

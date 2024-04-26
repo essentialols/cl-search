@@ -13,11 +13,11 @@ from selenium.webdriver.safari.options import Options as SafariOptions
 from cl_search.utils import selectors
 
 
-def get_webdriver(
-    webdriver: str = "firefox", headless: bool = False, options=None
-) -> webdriver:
+def get_webdriver(webdriver: str = "firefox", **kwargs) -> webdriver:
+    driver_options = kwargs.get("driver_options", None)
+
     use_driver = set_driver(webdriver)
-    options = options or set_options(webdriver, headless)
+    options = driver_options or set_options(webdriver, **kwargs)
     service = set_service(webdriver)
 
     if service:
@@ -37,10 +37,12 @@ def set_driver(webdriver: str) -> webdriver:
         return drivers[webdriver]
 
 
-def set_options(webdriver: str, headless: bool):
+def set_options(webdriver: str, **kwargs):
+    headless_mode = kwargs.get("headless_mode", False)
+
     try:
         if webdriver in preferences:
-            return preferences[webdriver](headless)
+            return preferences[webdriver](headless_mode)
 
     except Exception:
         print(f"{webdriver} is not supported")
@@ -53,62 +55,62 @@ def set_service(webdriver: str):
     return None
 
 
-def chrome_driver_preferences(headless: bool) -> ChromeOptions:
+def chrome_driver_preferences(headless_mode: bool) -> ChromeOptions:
     user_agent = selectors["user_agent"]
 
     options = ChromeOptions()
     options.add_argument(f"--user-agent={user_agent}")
 
-    if headless:
+    if headless_mode is True:
         options.add_argument("-headless")
 
     return options
 
 
-def firefox_driver_preferences(headless: bool) -> GeckoOptions:
+def firefox_driver_preferences(headless_mode: bool) -> GeckoOptions:
     user_agent = selectors["user_agent"]
 
     options = GeckoOptions()
     options.set_preference("general.useragent.override", user_agent)
     options.set_preference("permissions.default.desktop-notification", 2)
 
-    if headless:
+    if headless_mode is True:
         options.add_argument("-headless")
 
     return options
 
 
-def safari_driver_preferences(headless: bool) -> SafariOptions:
+def safari_driver_preferences(headless_mode: bool) -> SafariOptions:
     user_agent = selectors["user_agent"]
 
     options = SafariOptions()
     options.add_argument(f"--user-agent={user_agent}")
 
-    if headless:
+    if headless_mode is True:
         options.add_argument("-headless")
 
     return options
 
 
-def edge_driver_preferences(headless: bool) -> EdgeOptions:
+def edge_driver_preferences(headless_mode: bool) -> EdgeOptions:
     user_agent = selectors["user_agent"]
 
     options = EdgeOptions()
     options.add_argument(f"--user-agent={user_agent}")
 
-    if headless:
+    if headless_mode is True:
         options.add_argument("-headless")
 
     return options
 
 
-def chromium_driver_preferences(headless: bool) -> ChromeOptions:
+def chromium_driver_preferences(headless_mode: bool) -> ChromeOptions:
     user_agent = selectors["user_agent"]
 
     options = ChromiumOptions()
     options.add_argument(f"--user-agent={user_agent}")
 
-    if headless:
+    if headless_mode is True:
         options.add_argument("-headless")
 
     return options
@@ -147,7 +149,7 @@ def get_url(driver: webdriver, url: str) -> None:
 
     except TimeoutException as e:
         close_driver(driver)
-        raise TimeoutError(f"Selenium timed out waiting for the page to load: {e}")
+        raise TimeoutError(f"Selenium timed out waiting for page to load: {e}")
 
 
 def close_driver(driver: webdriver = None) -> None:

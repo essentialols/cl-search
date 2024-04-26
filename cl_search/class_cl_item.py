@@ -1,6 +1,6 @@
 from cl_search.utils import download_images
+from cl_search.utils import get_city_name
 from cl_search.utils import parse_post_id
-from cl_search.utils import parse_url
 from cl_search.utils import split_url_size
 
 
@@ -43,8 +43,8 @@ class List(CL_item):
         ]
 
     @classmethod
-    def organize_listing_data(cls, link: str, posts_data: list, make_images: bool):
-        city_name = parse_url(link)
+    def organize_listing_data(cls, link: str, posts_data: list, **kwargs):
+        city_name = get_city_name(link)
         craigslist_posts = []
 
         for posts in posts_data:
@@ -109,8 +109,8 @@ class Narrow_list(CL_item):
         }
 
     @classmethod
-    def organize_listing_data(cls, link: str, posts_data: list, make_images: bool):
-        city_name = parse_url(link)
+    def organize_listing_data(cls, link: str, posts_data: list, **kwargs):
+        city_name = get_city_name(link)
         craigslist_posts = []
 
         for posts in posts_data:
@@ -195,8 +195,10 @@ class Thumb(CL_item):
 
     # finish writing this
     @classmethod
-    def organize_listing_data(cls, link: str, posts_data: list, make_images: bool):
-        city_name = parse_url(link)
+    def organize_listing_data(cls, link: str, posts_data: list, **kwargs):
+        images_mode = kwargs.get("images_mode")
+
+        city_name = get_city_name(link)
         craigslist_posts = []
 
         for posts in posts_data:
@@ -235,14 +237,14 @@ class Thumb(CL_item):
             image_url_src = posts.find("img").get(
                 "src") if posts.find("img") else ""
 
-            if image_url_src.strip() == "":  # errors out if scroll_pause_time is low
+            if image_url_src.strip() == "":
                 image_url = "No image"
 
             else:
                 base_image_src = split_url_size(image_url_src)
                 image_url = str(base_image_src + '_600x450.jpg')
 
-            if make_images is True:
+            if images_mode is True:
                 image_path = download_images(image_url)
 
             else:
@@ -317,8 +319,10 @@ class Preview(CL_item):
 
     # finish writing this
     @classmethod
-    def organize_listing_data(cls, link: str, posts_data: list, make_images: bool):
-        city_name = parse_url(link)
+    def organize_listing_data(cls, link: str, posts_data: list, **kwargs):
+        images_mode = kwargs.get("images_mode")
+
+        city_name = get_city_name(link)
 
         craigslist_posts = []
         image_paths = []
@@ -367,14 +371,14 @@ class Preview(CL_item):
             image_url_src = posts.find("img").get(
                 "src") if posts.find("img") else ""
 
-            if image_url_src.strip() == "":  # errors out if scroll_pause_time is low
+            if image_url_src.strip() == "":
                 image_url = "No image"
 
             else:
                 base_image_src = split_url_size(image_url_src)
                 image_url = str(base_image_src + '_600x450.jpg')
 
-            if make_images is True:
+            if images_mode is True:
                 image_path = download_images(image_url)
 
             else:
@@ -439,8 +443,10 @@ class Grid(CL_item):
         }
 
     @classmethod
-    def organize_listing_data(cls, link: str, posts_data: list, make_images: bool):
-        city_name = parse_url(link)
+    def organize_listing_data(cls, link: str, posts_data: list, **kwargs):
+        images_mode = kwargs.get("images_mode")
+
+        city_name = get_city_name(link)
         craigslist_posts = []
 
         for posts in posts_data:
@@ -470,14 +476,14 @@ class Grid(CL_item):
             image_url_src = posts.find("img").get(
                 "src") if posts.find("img") else ""
 
-            if image_url_src.strip() == "":  # errors out if scroll_pause_time is low
+            if image_url_src.strip() == "":
                 image_url = "No image"
 
             else:
                 base_image_src = split_url_size(image_url_src)
                 image_url = str(base_image_src + '_600x450.jpg')
 
-            if make_images is True:
+            if images_mode is True:
                 image_path = download_images(image_url)
 
             else:
@@ -537,8 +543,10 @@ class Gallery(CL_item):
         }
 
     @classmethod
-    def organize_listing_data(cls, link: str, posts_data: list, make_images: bool):
-        city_name = parse_url(link)
+    def organize_listing_data(cls, link: str, posts_data: list, **kwargs):
+        images_mode = kwargs.get("images_mode")
+
+        city_name = get_city_name(link)
         craigslist_posts = []
 
         for posts in posts_data:
@@ -568,14 +576,14 @@ class Gallery(CL_item):
             image_url_src = posts.find("img").get(
                 "src") if posts.find("img") else ""
 
-            if image_url_src.strip() == "":  # errors out if scroll_pause_time is low
+            if image_url_src.strip() == "":
                 image_url = "No image"
 
             else:
                 base_image_src = split_url_size(image_url_src)
                 image_url = str(base_image_src + '_600x450.jpg')
 
-            if make_images is True:
+            if images_mode is True:
                 image_path = download_images(image_url)
 
             else:
@@ -599,7 +607,7 @@ class Gallery(CL_item):
         return craigslist_posts
 
 
-def identify_cl_item_type(link: str, posts_data: list, make_images: bool):
+def identify_cl_item_type(link: str, posts_data: list, **kwargs):
     for posts in posts_data:
         result_node_wide = posts.parent.find("div", class_="result-node-wide")
         result_node_narrow = posts.parent.find(
@@ -613,35 +621,38 @@ def identify_cl_item_type(link: str, posts_data: list, make_images: bool):
 
             if card_content:
                 cl_item_data = Preview.organize_listing_data(
-                    link, posts_data, make_images
+                    link, posts_data, **kwargs
                 )
                 return cl_item_data
 
             elif cl_gallery:
                 cl_item_data = Grid.organize_listing_data(
-                    link, posts_data, make_images)
+                    link, posts_data, **kwargs
+                )
                 return cl_item_data
 
             else:
                 cl_item_data = Thumb.organize_listing_data(
-                    link, posts_data, make_images
+                    link, posts_data, **kwargs
                 )
                 return cl_item_data
 
         if result_node_wide:
             cl_item_data = List.organize_listing_data(
-                link, posts_data, make_images)
+                link, posts_data, **kwargs
+            )
             return cl_item_data
 
         if result_node_narrow:
             cl_item_data = Narrow_list.organize_listing_data(
-                link, posts_data, make_images
+                link, posts_data, **kwargs
             )
             return cl_item_data
 
         if gallery_card:
             cl_item_data = Gallery.organize_listing_data(
-                link, posts_data, make_images)
+                link, posts_data, **kwargs
+            )
             return cl_item_data
 
     return None

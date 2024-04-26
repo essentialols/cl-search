@@ -1,3 +1,4 @@
+import pytest
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.chromium.options import ChromiumOptions
 from selenium.webdriver.edge.options import Options as EdgeOptions
@@ -20,13 +21,27 @@ from cl_search.driver import set_options
 from cl_search.driver import set_service
 
 
-def test_get_webdriver():
-    browser = "firefox"
+@pytest.fixture
+def test_args():
+    args = {
+        'search_query': 'iphone',
+        'output': 'csv',
+        'images_mode': False,
+        'location': 'austin',
+        'browser': 'firefox',
+        'headless_mode': False
+    }
+
+    return args
+
+
+def test_get_webdriver(test_args):
+    browser = test_args.get("browser")
+
     use_driver = set_driver(browser)
-    headless = False
     options = None
 
-    options = options or set_options(browser, headless)
+    options = options or set_options(browser, **test_args)
     service = set_service(browser)
 
     if service:
@@ -37,20 +52,21 @@ def test_get_webdriver():
         driver = None
 
     assert (
-        isinstance(get_webdriver(browser, headless, options), type(driver))
+        isinstance(get_webdriver(**test_args), type(driver))
         and driver is not None
     )
     close_driver(driver)
 
 
-def test_set_driver():
-    browser = "firefox"
+def test_set_driver(test_args):
+    browser = test_args.get("browser")
     assert set_driver(browser) == drivers[browser]
 
 
-def test_set_options():
-    browser = "firefox"
-    headless = False
+def test_set_options(test_args):
+    browser = test_args.get("browser")
+    headless = test_args.get("headless_mode")
+
     try:
         if browser in preferences:
             assert set_options(browser, headless) == preferences[browser](headless)
@@ -59,65 +75,61 @@ def test_set_options():
         print(f"{browser} is not supported")
 
 
-def test_set_service():
-    browser = "firefox"
+def test_set_service(test_args):
+    browser = test_args.get("browser")
     if browser in services:
         service_instance = services[browser]()
         assert isinstance(set_service(browser), type(service_instance))
 
 
-def test_chrome_driver_preferences():
-    headless = False
+def test_chrome_driver_preferences(test_args):
+    headless = test_args.get("headless_mode")
     chrome_options_instance = ChromeOptions()
     assert isinstance(
         chrome_driver_preferences(headless), type(chrome_options_instance)
     )
 
 
-def test_firefox_driver_preferences():
-    headless = False
+def test_firefox_driver_preferences(test_args):
+    headless = test_args.get("headless_mode")
     firefox_options_instance = GeckoOptions()
     assert isinstance(
         firefox_driver_preferences(headless), type(firefox_options_instance)
     )
 
 
-def test_safari_driver_preferences():
-    headless = False
+def test_safari_driver_preferences(test_args):
+    headless = test_args.get("headless_mode")
     safari_options_instance = SafariOptions()
     assert isinstance(
         safari_driver_preferences(headless), type(safari_options_instance)
     )
 
 
-def test_edge_driver_preferences():
-    headless = False
+def test_edge_driver_preferences(test_args):
+    headless = test_args.get("headless_mode")
     edge_options_instance = EdgeOptions()
     assert isinstance(edge_driver_preferences(headless), type(edge_options_instance))
 
 
-def test_chromium_driver_preferences():
-    headless = False
+def test_chromium_driver_preferences(test_args):
+    headless = test_args.get("headless_mode")
     chromium_options_instance = ChromiumOptions()
     assert isinstance(
         chromium_driver_preferences(headless), type(chromium_options_instance)
     )
 
 
-def test_get_url():
-    browser = "firefox"
-    headless = False
-    options = None
-    driver = get_webdriver(browser, headless, options)
+def test_get_url(test_args):
+    browser = test_args.get("browser")
+    driver = get_webdriver(browser, **test_args)
     url = "https://kent.craigslist.org/"
     get_url(driver, url)
     close_driver(driver)
 
 
-def test_close_driver():
-    browser = "firefox"
-    headless = False
-    options = None
-    driver = get_webdriver(browser, headless, options)
+def test_close_driver(test_args):
+    browser = test_args.get("browser")
+    driver = get_webdriver(browser, **test_args)
     if driver:
         close_driver(driver)

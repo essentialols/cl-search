@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 
 from cl_search.class_cl_item import Gallery
-from cl_search.utils import parse_url
+from cl_search.utils import get_city_name
 from cl_search.write_dataframes import df_output
 from cl_search.write_dataframes import get_export_formats
 from cl_search.write_dataframes import write_frames
@@ -26,29 +26,33 @@ def craigslist_posts():
     return craigslist_posts
 
 
+@pytest.fixture
+def test_args():
+    args = {
+        'search_query': 'iphone',
+        'output': 'csv',
+        'location': 'austin'
+    }
+
+    return args
+
+
 def test_get_export_formats(craigslist_posts):
     df = pd.DataFrame([x.as_dict() for x in craigslist_posts])
 
     get_export_formats(df)
 
 
-def test_df_output(craigslist_posts):
+def test_df_output(craigslist_posts, test_args):
     link = "https://austin.craigslist.org/"
-    city_name = parse_url(link)
-    output_arg = "csv"
-    location_arg = "austin"
-    search_query = "iphone"
+    city_name = get_city_name(link)
 
     df = pd.DataFrame([x.as_dict() for x in craigslist_posts])
 
-    df_output(city_name, df, location_arg, search_query, output_arg)
+    df_output(city_name, df, **test_args)
 
 
-def test_write_frames(craigslist_posts):
+def test_write_frames(craigslist_posts, test_args):
     link = "https://austin.craigslist.org/"
-    output_arg = "csv"
-    location_arg = "austin"
-    search_query = "iphone"
 
-    write_frames(link, craigslist_posts, location_arg,
-                 search_query, output_arg)
+    write_frames(link, craigslist_posts, **test_args)

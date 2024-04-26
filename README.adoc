@@ -1,8 +1,24 @@
 = cl search
+ifdef::env-github[]
 Gavin Kondrath <78187175+gavink97@users.noreply.github.com>
 v1.0, 2024-04-12
-:toc:
 :homepage: https://github.com/gavink97
+endif::[]
+:toc:
+:toc-placement!:
+:icons: font
+
+A simple CLI tool to get everything you need from Craigslist
+
+ifdef::env-github[]
+image:https://img.youtube.com/vi/pwVZ8CfouIY/maxresdefault.jpg[link=https://youtu.be/pwVZ8CfouIY]
+endif::[]
+
+ifndef::env-github[]
+video::pwVZ8CfouIY[youtube]
+endif::[]
+
+toc::[]
 
 == Why
 
@@ -49,15 +65,29 @@ pip install -e cl-search
 
 === Using the CLI
 
+The cl search CLI is available at `cl`. Below is an example of how you might
+search for iphones in Austin, Texas using a headless browser and exporting the
+results to an sql database.
+
 ....
- cl -s iphone -L austin --headless
+ cl -s iphone -L austin --headless -o sql
 ....
+
+=== Changing your timezone
+
+Modify to your preferred timezone in `preferences.py`
+
+[, python]
+----
+include::cl_search/preferences.py[lines=6]
+----
+
 
 == Commands
 
 === Location
 
-*_Location is a required flag_*
+IMPORTANT: *_Location is a required flag_*
 
 Supports URLs, City Names, States, Provinces, Countries, Continents, or
 Craigslist
@@ -71,25 +101,19 @@ Craigslist
 `cl -L https://dallas.craigslist.org`
 
 
-🦅 Use Lower 48 to search thru the Contiguous US 🦅
-
-`cl -L 'Lower 48'`
-
-*_You can customize locations by modifying or appending to the end of the dict
-in_* `locations.py`
+TIP: Use `Lower 48` to search thru the Contiguous US 🦅
 
 === Output
 
-*_Default Output is CSV_*
+NOTE: *_Default Output is CSV_*
 
 Currently supporting a few different formats:
 
 - csv
 - json
-- excel*
+- excelfootnote:disclaimer[experimental / incomplete feature]
 - sqlite 3
 
-_*experimental or incomplete feature_
 
 `-o or --output foo`
 
@@ -105,7 +129,7 @@ or just use the extension for ease of use!
 
 === Browser
 
-*_Defaults to Firefox_*
+NOTE: *_Defaults to Firefox_*
 
 Supports the following browsers:
 
@@ -119,15 +143,15 @@ Supports the following browsers:
 
 === Headless mode
 
-*_False by Default_*
+NOTE: *_False by Default_*
 
-Supports Headless mode in all major browsers!
+Supports https://www.browserstack.com/guide/what-is-headless-browser-testing[Headless mode] in all major browsers!
 
 `--headless`
 
 === Search
 
-*_No Default / Not Required_*
+NOTE: *_No Default / Not Required_*
 
 Query a search or take every listing!
 
@@ -137,7 +161,7 @@ Query a search or take every listing!
 
 === Image
 
-*_False by Default_*
+NOTE: *_False by Default_*
 
 Downloads images from the listings.
 
@@ -145,7 +169,7 @@ Downloads images from the listings.
 
 === Category
 
-*_Default All for sale_*
+NOTE: *_Default All for sale_*
 
 Select the category or subcategory you wish to search in.
 
@@ -155,20 +179,21 @@ _All categories are listed in_ `categories.py`
 
 You can customize these categories by appending to the end of the dict.
 
+=== Delete
 
-**Some of my favorite categories are:**
+NOTE: *_False by Default_*
 
-Free -  to search for free stuff.
+Deletes old listings from SQL tables
 
-`cl -L austin -C free`
+`-D or --delete`
 
-Software -  to look for Software Engineering jobs.
+You can modify the timedelta in `database.py` to adjust when listings are
+deleted
 
-`cl -L sf -C software`
-
-Housing - to search for housing.
-
-`cl -L nyc -C housing`
+[, python]
+----
+include::cl_search/database.py[lines=276]
+----
 
 == Contributing
 

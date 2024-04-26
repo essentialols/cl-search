@@ -2,6 +2,7 @@ import os
 import re
 import time
 
+import pandas as pd
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.common.exceptions import ElementNotInteractableException
@@ -18,25 +19,26 @@ from cl_search.class_cl_item import identify_cl_item_type
 from cl_search.driver import close_driver
 from cl_search.driver import get_url
 from cl_search.driver import get_webdriver
+from cl_search.utils import get_city_name
 from cl_search.utils import get_current_time
 from cl_search.utils import parse_post_id
-from cl_search.utils import parse_url
 from cl_search.utils import project_path
 from cl_search.utils import selectors
+from cl_search.write_dataframes import df_output
 from cl_search.write_dataframes import get_default_options
-from cl_search.write_dataframes import get_export_formats
 from cl_search.write_dataframes import write_frames
-# import pandas as pd
 
 
 current_time = get_current_time()
 
 
-def navigate_to_category(
-    link: str, search_query: str, browser_arg: str, headless_arg: bool, category_xpath: str, detailed: bool = False
-) -> webdriver:
-    city_name = parse_url(link)
-    driver = get_webdriver(browser_arg, headless_arg)
+def navigate_to_category(link: str, **kwargs) -> webdriver:
+    search_query = kwargs.get("search_query", None)
+    category_choice = kwargs.get("category_choice")
+    detailed_mode = kwargs.get("detailed_mode", False)
+
+    city_name = get_city_name(link)
+    driver = get_webdriver(**kwargs)
     wait = WebDriverWait(driver, 60)
     get_url(driver, link)
 
@@ -44,7 +46,7 @@ def navigate_to_category(
         f"Fetching {search_query}s from {city_name.capitalize()} Craigslist...")
 
     category = wait.until(
-        EC.visibility_of_element_located((By.XPATH, f"{category_xpath}"))
+        EC.visibility_of_element_located((By.XPATH, f"{category_choice}"))
     )
     category.click()
     search_field = wait.until(
@@ -61,7 +63,7 @@ def navigate_to_category(
             (By.XPATH, selectors["selectors"]["results"]))
     )
 
-    if detailed is True:
+    if detailed_mode is True:
         result_options = wait.until(EC.visibility_of_element_located(
             (By.XPATH, selectors['selectors']['result_options']['box_button'])))
         result_options.click()
@@ -77,10 +79,6 @@ def navigate_to_category(
 
 def wait_for_images(driver: webdriver, timeout=15) -> None:
 
-    # explicit wait strategy
-    # change to this method if image_url_src.strip errors
-    # time.sleep(1.5)
-
     try:
         driver.implicitly_wait(timeout)
 
@@ -94,7 +92,7 @@ def wait_for_images(driver: webdriver, timeout=15) -> None:
         print("Images did not load within the timeout period")
 
 
-def get_listing_data(link: str, driver: webdriver, image_arg: bool, output_arg: str, location_arg: str, search_query: str) -> None:
+def get_listing_data(link: str, driver: webdriver, **kwargs) -> None:
     to_stop = False
     current_page = 0
     total_items = 0
@@ -120,8 +118,7 @@ def get_listing_data(link: str, driver: webdriver, image_arg: bool, output_arg: 
             By.XPATH, selectors["selectors"]["results"]
         )
 
-        parse_results(search_results, link, image_arg,
-                      output_arg, location_arg, search_query)
+        parse_results(search_results, link, **kwargs)
 
         page_num = driver.find_element(By.CLASS_NAME, "cl-page-number").text
         pattern = r"([\d,]+)\s*of\s*([\d,]+)"
@@ -150,23 +147,24 @@ def get_listing_data(link: str, driver: webdriver, image_arg: bool, output_arg: 
 
     close_driver(driver)
 
-    # if output_arg == "clipboard":
+    # if output == "clipboard":
     #     return post_data
 
 
-def parse_results(search_results: WebElement, link: str, image_arg: bool, output_arg: str, location_arg: str, search_query: str):
-    export_formats = get_export_formats()
+def parse_results(search_results: WebElement, link: str, **kwargs):
+    output = kwargs.get("output", "csv").lower()
+    location = kwargs.get("location")
+    file_extension = kwargs.get("file_extension")
+    search_query = kwargs.get("search_query", None)
+    file_read = kwargs.get("file_read")
+
     default_options = get_default_options()
     sheets = f"{project_path}/sheets"
 
-    if output_arg in export_formats:
-        function_name, file_extension, file_read = export_formats[output_arg]
+    if output in default_options:
+        write_options, append_options, read_options = default_options[output]
 
-    if output_arg in default_options:
-        write_options, append_options, read_options = default_options[output_arg]
-
-    soup = BeautifulSoup(search_results.get_attribute(
-        "innerHTML"), "html.parser")
+    soup = BeautifulSoup(search_results.get_attribute("innerHTML"), "html.parser")
     for data in soup.find_all("li", {"class": "cl-search-result"}):
         if data.find("div", "spacer"):
             continue
@@ -175,41 +173,48 @@ def parse_results(search_results: WebElement, link: str, image_arg: bool, output
                     if data.find("a", "posting-title") else "")
         post_id = parse_post_id(post_url)
 
-        if output_arg == "clipboard":
+        if output == "clipboard":
             # check if post_id exists inside post_data
             # post_data.extend(data)
             pass
 
-        elif output_arg == 'sql':
-            craigslist_posts = identify_cl_item_type(link, data, image_arg)
-            write_frames(link, craigslist_posts, location_arg,
-                         search_query, output_arg)
+        elif output == 'sql':
+            craigslist_posts = identify_cl_item_type(link, data, **kwargs)
+            write_frames(link, craigslist_posts, **kwargs)
 
         else:
-            output_file = f"{sheets}/{location_arg}_{search_query}.{file_extension}"
+            output_file = f"{sheets}/{location}_{search_query}.{file_extension}"
 
             if os.path.isfile(output_file):
                 file = file_read(output_file, **read_options)
                 existing_data = file[file['post_id'].astype(
                     str).str.contains(post_id)]
                 if not existing_data.empty:
-                    pass
-                    # update / merge outdated data
-                    # post_data = identify_cl_item_type(link, data, image_arg)
-                    # post_data_df = pd.DataFrame([x.as_dict() for x in post_data])
-                    # merged_data = pd.merge(file, post_data_df, on='post_id', how='left', suffixes=('_existing', '_new'))
-                    # for col in file.columns:
-                    #   merged_data[col] = merged_data[f"{col}_new"].fillna(merged_data[f"{col}_existing"])
-                    #   merged_data.drop(columns=[f"{col}_existing" for col in file.columns] + [f"{col}_new" for col in post_data_df.columns], inplace=True)
-                    # write_frames(link, post_data, location_arg, search_query, output_arg)
+                    post_data = identify_cl_item_type(link, data, **kwargs)
+
+                    city_name = get_city_name(link)
+                    source_name = f"craigslist_{city_name}"
+
+                    post_data_df = pd.DataFrame([x.as_dict() for x in post_data])
+                    post_data_df.insert(0, "last_updated", current_time)
+                    post_data_df.insert(0, "time_added", current_time)
+                    post_data_df.insert(0, "is_new", 0)
+                    post_data_df.insert(0, "source", f"{source_name}")
+                    post_data_df.dropna(inplace=True)
+
+                    columns_to_update = ["is_new", "last_updated", "title",
+                                         "price", "timestamp", "location",
+                                         "image_url", "image_path"]
+
+                    for col in columns_to_update:
+                        file.loc[existing_data.index, col] = post_data_df[col].values
+
+                    df_output(city_name, file, write_options, **kwargs)
 
                 else:
-                    craigslist_posts = identify_cl_item_type(
-                        link, data, image_arg)
-                    write_frames(link, craigslist_posts,
-                                 location_arg, search_query, output_arg)
+                    craigslist_posts = identify_cl_item_type(link, data, **kwargs)
+                    write_frames(link, craigslist_posts, **kwargs)
 
             else:
-                craigslist_posts = identify_cl_item_type(link, data, image_arg)
-                write_frames(link, craigslist_posts, location_arg,
-                             search_query, output_arg, write_options)
+                craigslist_posts = identify_cl_item_type(link, data, **kwargs)
+                write_frames(link, craigslist_posts, write_options, **kwargs)

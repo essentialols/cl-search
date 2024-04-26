@@ -115,11 +115,22 @@ def process_sample_data(sample_data):
     return posts_data
 
 
-def test_list_organize_listing_data(process_sample_data):
+@pytest.fixture
+def test_args():
+    args = {
+        'search_query': 'iphone',
+        'output': 'csv',
+        'images_mode': False,
+        'location': 'austin'
+    }
+
+    return args
+
+
+def test_list_organize_listing_data(process_sample_data, test_args):
     posts_data = process_sample_data
     url = "https://kent.craigslist.org/"
-    makes_images = False
-    craigslist_posts = identify_cl_item_type(url, posts_data, makes_images)
+    craigslist_posts = identify_cl_item_type(url, posts_data, **test_args)
 
     assert craigslist_posts[0].title == "Paiste Twenty Masters prototype 21 ride cymbal"
     assert craigslist_posts[0].price == "$250"
@@ -159,9 +170,8 @@ def test_list_organize_listing_data(process_sample_data):
         assert craigslist_posts[0].image_path == "No image path"
 
 
-def test_identify_cl_item_type(process_sample_data):
+def test_identify_cl_item_type(process_sample_data, test_args):
     url = "https://kent.craigslist.org/"
-    make_images = False
-    cl_item_data = identify_cl_item_type(url, process_sample_data, make_images)
+    cl_item_data = identify_cl_item_type(url, process_sample_data, **test_args)
 
     assert isinstance(cl_item_data[0], CL_item)

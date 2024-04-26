@@ -17,6 +17,13 @@ project_path = os.path.join(launcher_path, os.pardir)
 selectors = toml.load(os.path.join(launcher_path, "selectors.toml"))
 
 
+def get_current_datetime() -> datetime.datetime:
+    timezone = pytz.timezone(tz)
+    current_time = datetime.datetime.now(timezone)
+
+    return current_time
+
+
 def get_current_time() -> datetime.datetime:
     timezone = pytz.timezone(tz)
     current_time = datetime.datetime.now(timezone).strftime("%Y-%m-%d %H:%M")
@@ -24,8 +31,7 @@ def get_current_time() -> datetime.datetime:
     return current_time
 
 
-# rename this function
-def parse_url(url: str) -> str:
+def get_city_name(url: str) -> str:
     parsed_url = urlparse(url)
     parts_url = parsed_url.netloc.split(".")
     if (

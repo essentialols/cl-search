@@ -1,4 +1,3 @@
-from datetime import datetime
 from datetime import timedelta
 
 import pandas as pd
@@ -7,6 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from cl_search.utils import delete_images
+from cl_search.utils import get_current_datetime
 from cl_search.utils import get_current_time
 
 
@@ -268,36 +268,48 @@ def update_listings(db: Connection, row: pd.DataFrame) -> None:
     cursor.close()
 
 
-# not finished / tested
 def delete_query(db: Connection) -> None:
     cursor = db.connection().connection.cursor()
 
-    one_week_ago = datetime.now() - timedelta(weeks=1)
+    current_time = get_current_datetime()
 
-    select_old_query = """
-        SELECT * FROM listings
+    time_to_stale = current_time - timedelta(weeks=1)
+
+    # time_to_stale = current_time - timedelta(minutes=5)
+
+    select_old_images = """
+        SELECT i.image_path
+        FROM images i
+        JOIN listings l ON i.listing_id = l.id
+        WHERE l.last_updated < ?
+        """
+
+    delete_old_listings = """
+        DELETE FROM listings
         WHERE last_updated < ?
         """
 
-    delete_query = """
-        DELETE FROM listings
-        WHERE last_updated < ?
-    """
-
-    cursor.execute(select_old_query, (one_week_ago,))
+    cursor.execute(select_old_images, (time_to_stale,))
     old_images = cursor.fetchall()
 
-    for image in old_images:
-        delete_images(image)
+    if len(old_images) > 0:
+        for image in old_images:
+            image_path = image[0].strip()
+            print(f'deleteing old image:{image_path}')
+            delete_images(image_path)
 
-    cursor.execute(delete_query, (one_week_ago,))
+    cursor.execute(delete_old_listings, (time_to_stale,))
 
     db.commit()
     cursor.close()
 
 
-def query_post_id(db: Connection, df: pd.DataFrame) -> None:
+def query_post_id(db: Connection, df: pd.DataFrame, **kwargs) -> None:
+    delete_mode = kwargs.get("delete_mode")
+
     cursor = db.connection().connection.cursor()
+
+    cursor.execute("PRAGMA foreign_keys = ON;")
 
     post_id_query = """
         SELECT * FROM listings
@@ -318,6 +330,9 @@ def query_post_id(db: Connection, df: pd.DataFrame) -> None:
             insert_sources(db, row)
             insert_data_sources(db, row)
             insert_images(db, row)
+
+    if delete_mode is True:
+        delete_query(db)
 
     cursor.close()
     db.close()
