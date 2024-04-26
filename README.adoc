@@ -3,6 +3,11 @@ ifdef::env-github[]
 Gavin Kondrath <78187175+gavink97@users.noreply.github.com>
 v1.0, 2024-04-12
 :homepage: https://github.com/gavink97
+:tip-caption: :bulb:
+:note-caption: :information_source:
+:important-caption: :heavy_exclamation_mark:
+:caution-caption: :fire:
+:warning-caption: :warning:
 endif::[]
 :toc:
 :toc-placement!:
@@ -79,7 +84,7 @@ Modify to your preferred timezone in `preferences.py`
 
 [, python]
 ----
-include::cl_search/preferences.py[lines=6]
+tz = os.environ.get("TZ", "US/Central")
 ----
 
 
@@ -192,7 +197,7 @@ deleted
 
 [, python]
 ----
-include::cl_search/database.py[lines=276]
+time_to_stale = current_time - timedelta(weeks=1)
 ----
 
 == Contributing
