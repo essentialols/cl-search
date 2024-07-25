@@ -49,30 +49,38 @@ problem.
 === File tree
 
 ....
+CWD
 ├── [cl_search]
 ├── images
 │   ├── no_image.png
 │   └── cl_images
-├── sheets
-│   ├── foo_bar.json
-│   └── location_search_query.csv
+├── foo_bar.json
+├── location_search_query.csv
 └── craigslist.db
 ....
 
 === Building from source
 
+I recommend building from source with uv
+
 ....
-gh repo clone gavink97/cl-search .
-pip install -e cl-search
+gh repo clone gavink97/cl-search
+uv venv
+source .venv/bin/activate
+uv pip install -e cl-search
 ....
 
 == Getting Started
 
 === Using the CLI
 
-The cl search CLI is available at `cl`. Below is an example of how you might
+The cl search CLI is available at `cl`.
+
+Here is an example of how you might
 search for iphones in Austin, Texas using a headless browser and exporting the
 results to an sql database.
+
+Resulting database will be in your current working directory.
 
 ....
  cl -s iphone -L austin --headless -o sql
@@ -172,6 +180,16 @@ Downloads images from the listings.
 
 `-i or --image`
 
+Image defaults can be set in `class_cl_item.py` by subclass.
+
+[, python]
+----
+if image_url_src.strip() == "":
+    image_url = "No image"
+    image_path = f'{path}/images/no_image.png'
+----
+
+
 === Category
 
 NOTE: *_Default All for sale_*
@@ -200,6 +218,14 @@ deleted
 time_to_stale = current_time - timedelta(weeks=1)
 ----
 
+=== Path
+
+NOTE: *_Defaults to Current Working Directory_*
+
+Select an absolute or relative path to save sheets & images.
+
+`cl -L austin -s iphone /app`
+
 == Contributing
 
 Contributions are welcomed to this project.
@@ -211,11 +237,15 @@ before submission.
 
 === Planned additions
 * [x] Add SQL support
+* [x] Output Path Arguement
 * [ ] Views: Add support for Preview View (detailed view)
-* [ ] Output Path Arguement
 * [ ] Improve CLI Experience
 * [ ] Make simple python api
+* [ ] Multiprocessing
 
 === Feature ideas
 * [ ] Filter Search
 * [ ] Spam filters
+
+== Star History
+image:https://api.star-history.com/svg?repos=gavink97/cl-search&type=Date[link=https://star-history.com/#gavink97/cl-search&Date]

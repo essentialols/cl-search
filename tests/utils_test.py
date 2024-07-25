@@ -1,9 +1,10 @@
+import os
+
 from cl_search.locations import VALID_LOCATIONS
 from cl_search.utils import download_images
 from cl_search.utils import get_city_name
 from cl_search.utils import get_links
 from cl_search.utils import parse_post_id
-from cl_search.utils import project_path
 from cl_search.utils import split_url_size
 from cl_search.utils import valid_url
 
@@ -23,9 +24,10 @@ def test_parse_post_id():
 
 
 def test_download_images():
+    path = os.getcwd()
     url = "https://kent.craigslist.org/"
-    cl_images_dir = f"{project_path}/images/cl_images/"
-    assert download_images(url) == cl_images_dir  # image_path
+    cl_images_dir = f"{path}/images/cl_images/"
+    assert download_images(url, output_path=path) == cl_images_dir
 
 
 def test_get_links():

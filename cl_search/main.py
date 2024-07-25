@@ -1,184 +1,105 @@
 from __future__ import annotations
 
-import argparse
+import os
+from concurrent.futures import as_completed
+from concurrent.futures import ThreadPoolExecutor
+from queue import Queue
 
-from cl_search.categories import VALID_CATEGORIES
+import pandas as pd
+from tqdm import tqdm
+
+from cl_search.args import parse_my_args
 from cl_search.craigslist import get_listing_data
 from cl_search.craigslist import navigate_to_category
-from cl_search.driver import drivers
-from cl_search.locations import VALID_LOCATIONS
-from cl_search.utils import get_links
+from cl_search.utils import get_current_time
+from cl_search.write_dataframes import df_output
+from cl_search.write_dataframes import get_default_options
 from cl_search.write_dataframes import get_export_formats
+from cl_search.write_dataframes import write_frames
+
+
+def process_link(link: str, queue: Queue, **kwargs):
+    driver = navigate_to_category(link, **kwargs)
+
+    try:
+        data = get_listing_data(link, driver, **kwargs)
+        queue.put(data)
+
+    except TimeoutError as e:
+        print(f"Timeout error occurred for URL: {link}. Error: {e}")
 
 
 def main(**kwargs) -> None:
+    data_queue = Queue()
+    collected_data = []
+
     output = kwargs.get("output", "csv")
     location_links = kwargs.get("location_links")
     location = kwargs.get("location", "")
     file_extension = kwargs.get("file_extension", "")
     search_query = kwargs.get("search_query", "")
+    path = kwargs.get("output_path")
 
-    count = 0
+    # debug issue with multiprocessing webdrivers
+    with ThreadPoolExecutor() as executor:
+        f = [executor.submit(process_link, link, data_queue, **kwargs) for link in location_links]
+        with tqdm(total=len(f), desc=f'Fetching {search_query} from {location.capitalize()} Craigslist') as pbar:
+            for future in as_completed(f):
+                pbar.update(1)
 
-    for link in location_links:
-        count += 1
-        print(f"Running Script {count}/{len(location_links)}.")
-        driver = navigate_to_category(link, **kwargs)
-
-        try:
-            get_listing_data(link, driver, **kwargs)
-
-        except TimeoutError as e:
-            print(f"Timeout error occurred for URL: {link}. Error: {e}")
+    while not data_queue.empty():
+        collected_data.extend(data_queue.get())
 
     if output == "clipboard":
-        # send post data to clipboard
+        write_frames(collected_data, **kwargs)
         print("Data is ready to paste")
 
     elif output == "sql":
+        write_frames(collected_data, **kwargs)
         print(f"Created craigslist.{file_extension}")
 
     else:
+        output_file = f"{path}/{location}_{search_query}.{file_extension}"
+        df = pd.DataFrame([x.as_list() for x in collected_data])
+        df.dropna(inplace=True)
+
+        default_options = get_default_options()
+        export_formats = get_export_formats(df)
+
+        if output in export_formats:
+            function_name, file_extension, file_read = export_formats[output]
+
+        if output in default_options:
+            write_options, append_options, read_options = default_options[output]
+
+        if os.path.isfile(output_file):
+            current_time = get_current_time()
+
+            existing_data = file_read(output_file, **read_options)
+            existing_post_ids = existing_data['post_id'].astype(str).tolist()
+
+            for _, row in df.iterrows():
+                if row['post_id'] in existing_post_ids:
+                    existing_index = existing_data[existing_data['post_id'] == row['post_id']].index
+                    existing_data.loc[existing_index, 'is_new'] = 0
+                    existing_data.loc[existing_index, 'last_updated'] = current_time
+                    columns_to_update = ["is_new", "last_updated", "title",
+                                         "price", "timestamp", "location",
+                                         "image_url", "image_path"]
+
+                    for col in columns_to_update:
+                        existing_data.loc[existing_index, col] = row[col]
+
+            df_output(existing_data, write_options, **kwargs)
+
+        else:
+            write_frames(collected_data, **kwargs)
+
         if search_query:
             print(f"Created {location}_{search_query}.{file_extension}")
+
         else:
             print(f"Created {location}.{file_extension}")
-
-
-def parse_my_args() -> dict:
-    export_formats = get_export_formats()
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument(
-        "-L",
-        "--location",
-        action="store",
-        type=str,
-        default="",
-        required=True,
-        help="Location: URL, City, State, Province, Country, or Continent.",
-    )
-    parser.add_argument(
-        "-o",
-        "--output",
-        type=str.lower,
-        choices=export_formats.keys(),
-        default="csv",
-        help="Output: CSV, JSON, EXCEL or SQL",
-    )
-    parser.add_argument(
-        "-b",
-        "--browser",
-        type=str.lower,
-        choices=drivers.keys(),
-        default="firefox",
-        help="Driver: Firefox, Chrome, Safari, Chromium, or Edge.",
-    )
-    parser.add_argument(
-        "--headless",
-        action="store_true",
-        default=False,
-        help="Headless mode",
-    )
-    parser.add_argument(
-        "-s",
-        "--search",
-        action="store",
-        type=str.lower,
-        default="",
-        help="Search query: Whatcha lookin for?",
-    )
-    parser.add_argument(
-        "-i",
-        "--image",
-        action="store_true",
-        default=False,
-        help="Download images",
-    )
-    parser.add_argument(
-        "-C",
-        "--category",
-        type=str.lower,
-        # choices=VALID_CATEGORIES.keys(),
-        default="sale",
-        help="Category: Select the category to search in.",
-    )
-    parser.add_argument(
-        "path",
-        type=str,
-        nargs="?",
-        help="Custom Output path",
-    )
-    parser.add_argument(
-        "-D",
-        "--delete",
-        action="store_true",
-        default=False,
-        help="Remove old data from SQL Tables",
-    )
-    parser.add_argument(
-        "-d",
-        "--detailed",
-        action="store_true",
-        default=False,
-        help="Use Detailed to get the most data possible",
-    )
-    parser.add_argument(
-        "-do",
-        "--driver-options",
-        type=str,
-        default="",
-        help="Custom driver options",
-    )
-    args = parser.parse_args()
-    sql = ["sql", "sqlite", "db"]
-
-    location = args.location
-    output = args.output
-    browser = args.browser
-    headless_mode = args.headless
-    search_query = args.search
-    images_mode = args.image
-    category = args.category
-    # output_path = args.path
-    delete_mode = args.delete
-    # detailed_mode = args.detailed
-    # driver_options = args.driver_options
-
-    location_links = get_links(location, VALID_LOCATIONS)
-
-    if category in VALID_CATEGORIES:
-        category_choice = VALID_CATEGORIES[category]
-
-    if location_links == []:
-        raise argparse.ArgumentTypeError(f"Invalid location: {location}")
-
-    if output in sql:
-        output = "sql"
-
-    if output == 'xlsx':
-        output = 'excel'
-
-    if output in export_formats:
-        function_name, file_extension, file_read = export_formats[output]
-
-    return {
-        'search_query': search_query,
-        'browser': browser,
-        'headless_mode': headless_mode,
-        'images_mode': images_mode,
-        'output': output,
-        'location_links': location_links,
-        'category_choice': category_choice,
-        'location': location,
-        # 'output_path': output_path,
-        'delete_mode': delete_mode,
-        # 'detailed_mode': detailed_mode,
-        # 'driver_options': driver_options,
-        'function_name': function_name,
-        'file_extension': file_extension,
-        'file_read': file_read
-    }
 
 
 def run() -> None:
@@ -186,6 +107,5 @@ def run() -> None:
     main(**args)
 
 
-# does not run as __main__ and I dont know why
 if __name__ == '__main__':
     run()

@@ -1,3 +1,4 @@
+import os
 from datetime import timedelta
 
 import pandas as pd
@@ -10,8 +11,11 @@ from cl_search.utils import get_current_datetime
 from cl_search.utils import get_current_time
 
 
-def setup_database(db_name: str = "craigslist.db") -> Connection:
-    engine = create_engine(f'sqlite:///{db_name}')
+def setup_database(db_name: str = "craigslist.db", **kwargs) -> Connection:
+    path = kwargs.get("output_path", os.getcwd())
+
+    db_path = os.path.join(path, db_name)
+    engine = create_engine(f'sqlite:///{db_path}')
     Session = sessionmaker(bind=engine)
     session = Session()
     create_tables(session)
@@ -19,8 +23,11 @@ def setup_database(db_name: str = "craigslist.db") -> Connection:
     return session
 
 
-def create_session(db_name: str = "craigslist.db") -> Connection:
-    engine = create_engine(f'sqlite:///{db_name}')
+def create_session(db_name: str = "craigslist.db", **kwargs) -> Connection:
+    path = kwargs.get("output_path", os.getcwd())
+
+    db_path = os.path.join(path, db_name)
+    engine = create_engine(f'sqlite:///{db_path}')
     Session = sessionmaker(bind=engine)
     session = Session()
 
@@ -84,8 +91,6 @@ def create_tables(db: Connection):
 
     db.commit()
     cursor.close()
-
-    print("Tables created")
 
 
 def insert_listings(db: Connection, row: pd.DataFrame) -> None:
@@ -293,9 +298,9 @@ def delete_query(db: Connection) -> None:
     old_images = cursor.fetchall()
 
     if len(old_images) > 0:
-        for image in old_images:
+        for index, image in enumerate(old_images):
             image_path = image[0].strip()
-            print(f'deleteing old image:{image_path}')
+            print(f'deleteing old images:({index + 1}/{image_path})')
             delete_images(image_path)
 
     cursor.execute(delete_old_listings, (time_to_stale,))

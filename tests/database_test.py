@@ -13,7 +13,6 @@ from cl_search.database import query_post_id
 from cl_search.database import setup_database
 from cl_search.database import update_listings
 from cl_search.utils import get_current_time
-from cl_search.utils import project_path
 
 
 @pytest.fixture
@@ -78,7 +77,8 @@ def sample_update():
 
 
 def delete_test_db(db_name: str = db_name) -> None:
-    test_db_path = f'{project_path}/{db_name}'
+    path = os.getcwd()
+    test_db_path = f'{path}/{db_name}'
 
     if os.path.isfile(test_db_path):
         os.remove(test_db_path)

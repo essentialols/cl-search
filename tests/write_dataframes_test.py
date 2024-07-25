@@ -2,7 +2,6 @@ import pandas as pd
 import pytest
 
 from cl_search.class_cl_item import Gallery
-from cl_search.utils import get_city_name
 from cl_search.write_dataframes import df_output
 from cl_search.write_dataframes import get_export_formats
 from cl_search.write_dataframes import write_frames
@@ -44,15 +43,10 @@ def test_get_export_formats(craigslist_posts):
 
 
 def test_df_output(craigslist_posts, test_args):
-    link = "https://austin.craigslist.org/"
-    city_name = get_city_name(link)
-
     df = pd.DataFrame([x.as_dict() for x in craigslist_posts])
 
-    df_output(city_name, df, **test_args)
+    df_output(df, **test_args)
 
 
 def test_write_frames(craigslist_posts, test_args):
-    link = "https://austin.craigslist.org/"
-
-    write_frames(link, craigslist_posts, **test_args)
+    write_frames(craigslist_posts, **test_args)

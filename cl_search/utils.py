@@ -7,13 +7,13 @@ from urllib.parse import urlparse
 import pytz
 import requests
 import toml
+from tqdm import tqdm
 
 from cl_search.locations import VALID_LOCATIONS
 from cl_search.preferences import tz
 
 logger = logging.getLogger("cl_search")
 launcher_path = os.path.abspath(os.path.dirname(__file__))
-project_path = os.path.join(launcher_path, os.pardir)
 selectors = toml.load(os.path.join(launcher_path, "selectors.toml"))
 
 
@@ -58,9 +58,12 @@ def parse_post_id(post_url: str) -> str:
     return post_id
 
 
-def download_images(image_url: str) -> str:
-    default_image_path = f"{project_path}/images/no_image.png"
-    cl_images_dir = f"{project_path}/images/cl_images"
+# add multithreading for preview mode
+def download_images(image_url: str, **kwargs) -> str:
+    path = kwargs.get("output_path", os.getcwd())
+
+    default_image_path = f"{path}/images/no_image.png"
+    cl_images_dir = f"{path}/images/cl_images"
 
     if not os.path.isdir(cl_images_dir):
         os.makedirs(cl_images_dir)
@@ -75,16 +78,16 @@ def download_images(image_url: str) -> str:
                 if response.status_code == 200:
                     with open(image_path, "wb") as file:
                         file.write(response.content)
-                        print(f"Image downloaded: {image_path}")
+                        tqdm.write(f"Image downloaded: {image_path}")
                 else:
-                    print(f"Failed to download image: {image_url}")
+                    tqdm.write(f"Failed to download image: {image_url}")
             else:
-                print(f"Invalid url: {image_url}")
+                tqdm.write(f"Invalid url: {image_url}")
         else:
-            print(f"Image already exists: {image_path}")
+            tqdm.write(f"Image already exists: {image_path}")
     else:
         image_path = f"{default_image_path}"
-        print("No image found: using default image")
+        tqdm.write("No image found: using default image")
 
     return image_path
 

@@ -1,50 +1,34 @@
 from cl_search.utils import download_images
 from cl_search.utils import get_city_name
+from cl_search.utils import get_current_time
 from cl_search.utils import parse_post_id
 from cl_search.utils import split_url_size
 
 
 class CL_item:
-    pass
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+    def as_dict(self):
+        return self.__dict__
+
+    def as_list(self):
+        return list(self.__dict__.values())
+
+    @classmethod
+    def organize_listing_data(cls, link: str, posts_data: list, **kwargs):
+        raise NotImplementedError("This method should be overridden in subclasses")
 
 
 class List(CL_item):
     kind = "list"
 
-    def __init__(self, title, price, timestamp, location, date, post_url, post_id):
-        self.title = title
-        self.price = price
-        self.timestamp = timestamp
-        self.location = location
-        self.date = date
-        self.post_url = post_url
-        self.post_id = post_id
-
-    def as_dict(self):
-        return {
-            "title": self.title,
-            "price": self.price,
-            "timestamp": self.timestamp,
-            "location": self.location,
-            "date": self.date,
-            "post_url": self.post_url,
-            "post_id": self.post_id,
-        }
-
-    def as_list(self):
-        return [
-            self.title,
-            self.price,
-            self.timestamp,
-            self.location,
-            self.date,
-            self.post_url,
-            self.post_id,
-        ]
-
     @classmethod
     def organize_listing_data(cls, link: str, posts_data: list, **kwargs):
         city_name = get_city_name(link)
+        source_name = f"craigslist_{city_name}"
+        current_time = get_current_time()
+
         craigslist_posts = []
 
         for posts in posts_data:
@@ -52,13 +36,11 @@ class List(CL_item):
             price_element = posts.find("span", "priceinfo")
             price = (
                 price_element.text.strip()
-                if price_element is not None
-                else "Price not given"
+                if price_element else "Price not given"
             )
             post_url = (
                 posts.find("a", "posting-title").get("href")
-                if posts.find("a", "posting-title")
-                else ""
+                if posts.find("a", "posting-title") else ""
             )
             timestamp = getattr(posts.select_one(
                 'span[title*="GMT"]'), "text", None)
@@ -79,7 +61,19 @@ class List(CL_item):
             post_id = parse_post_id(post_url)
 
             craigslist_posts.append(
-                cls(title, price, timestamp, location, date, post_url, post_id)
+                cls(
+                    source=source_name,
+                    is_new=1,
+                    time_added=current_time,
+                    last_updated=current_time,
+                    title=title,
+                    price=price,
+                    timestamp=timestamp,
+                    location=location,
+                    date=date,
+                    post_url=post_url,
+                    post_id=post_id
+                )
             )
 
         return craigslist_posts
@@ -88,29 +82,12 @@ class List(CL_item):
 class Narrow_list(CL_item):
     kind = "narrow list"
 
-    def __init__(self, title, price, timestamp, location, date, post_url, post_id):
-        self.title = title
-        self.price = price
-        self.timestamp = timestamp
-        self.location = location
-        self.date = date
-        self.post_url = post_url
-        self.post_id = post_id
-
-    def as_dict(self):
-        return {
-            "title": self.title,
-            "price": self.price,
-            "timestamp": self.timestamp,
-            "location": self.location,
-            "date": self.date,
-            "post_url": self.post_url,
-            "post_id": self.post_id,
-        }
-
     @classmethod
     def organize_listing_data(cls, link: str, posts_data: list, **kwargs):
         city_name = get_city_name(link)
+        source_name = f"craigslist_{city_name}"
+        current_time = get_current_time()
+
         craigslist_posts = []
 
         for posts in posts_data:
@@ -118,13 +95,11 @@ class Narrow_list(CL_item):
             price_element = posts.find("span", "priceinfo")
             price = (
                 price_element.text.strip()
-                if price_element is not None
-                else "Price not given"
+                if price_element else "Price not given"
             )
             post_url = (
                 posts.find("a", "posting-title").get("href")
-                if posts.find("a", "posting-title")
-                else ""
+                if posts.find("a", "posting-title") else ""
             )
             timestamp = getattr(posts.select_one(
                 'span[title*="GMT"]'), "text", None)
@@ -149,7 +124,19 @@ class Narrow_list(CL_item):
             post_id = parse_post_id(post_url)
 
             craigslist_posts.append(
-                cls(title, price, timestamp, location, date, post_url, post_id)
+                cls(
+                    source=source_name,
+                    is_new=1,
+                    time_added=current_time,
+                    last_updated=current_time,
+                    title=title,
+                    price=price,
+                    timestamp=timestamp,
+                    location=location,
+                    date=date,
+                    post_url=post_url,
+                    post_id=post_id
+                )
             )
 
         return craigslist_posts
@@ -158,47 +145,16 @@ class Narrow_list(CL_item):
 class Thumb(CL_item):
     kind = "thumb"
 
-    def __init__(
-        self,
-        title,
-        price,
-        timestamp,
-        location,
-        date,
-        image_url,
-        post_url,
-        post_id,
-        image_path,
-    ):
-        self.title = title
-        self.price = price
-        self.timestamp = timestamp
-        self.location = location
-        self.date = date
-        self.image_url = image_url
-        self.post_url = post_url
-        self.post_id = post_id
-        self.image_path = image_path
-
-    def as_dict(self):
-        return {
-            "title": self.title,
-            "price": self.price,
-            "timestamp": self.timestamp,
-            "location": self.location,
-            "date": self.date,
-            "post_url": self.post_url,
-            "image_url": self.image_url,
-            "post_id": self.post_id,
-            "image_path": self.image_path,
-        }
-
     # finish writing this
     @classmethod
     def organize_listing_data(cls, link: str, posts_data: list, **kwargs):
         images_mode = kwargs.get("images_mode")
+        path = kwargs.get("output_path")
 
         city_name = get_city_name(link)
+        source_name = f"craigslist_{city_name}"
+        current_time = get_current_time()
+
         craigslist_posts = []
 
         for posts in posts_data:
@@ -206,13 +162,11 @@ class Thumb(CL_item):
             price_element = posts.find("span", "priceinfo")
             price = (
                 price_element.text.strip()
-                if price_element is not None
-                else "Price not given"
+                if price_element else "Price not given"
             )
             post_url = (
                 posts.find("a", "posting-title").get("href")
-                if posts.find("a", "posting-title")
-                else ""
+                if posts.find("a", "posting-title") else ""
             )
             timestamp = getattr(posts.select_one(
                 'span[title*="GMT"]'), "text", None)
@@ -239,30 +193,30 @@ class Thumb(CL_item):
 
             if image_url_src.strip() == "":
                 image_url = "No image"
+                image_path = f'{path}/images/no_image.png'
 
             else:
                 base_image_src = split_url_size(image_url_src)
                 image_url = str(base_image_src + '_600x450.jpg')
-
-            if images_mode is True:
-                image_path = download_images(image_url)
-
-            else:
-                image_path = "No image path"
+                image_path = download_images(image_url, **kwargs) if images_mode else "No image path"
 
             post_id = parse_post_id(post_url)
 
             craigslist_posts.append(
                 cls(
-                    title,
-                    price,
-                    timestamp,
-                    location,
-                    date,
-                    image_url,
-                    post_url,
-                    post_id,
-                    image_path,
+                    source=source_name,
+                    is_new=1,
+                    time_added=current_time,
+                    last_updated=current_time,
+                    title=title,
+                    price=price,
+                    timestamp=timestamp,
+                    location=location,
+                    date=date,
+                    image_url=image_url,
+                    post_url=post_url,
+                    post_id=post_id,
+                    image_path=image_path,
                 )
             )
 
@@ -273,56 +227,15 @@ class Thumb(CL_item):
 class Preview(CL_item):
     kind = "preview"
 
-    def __init__(
-        self,
-        title,
-        price,
-        timestamp,
-        location,
-        date,
-        post_url,
-        image_urls,
-        post_id,
-        image_paths,
-        post_description,
-        address_info,
-        attribute,
-    ):
-        self.title = title
-        self.price = price
-        self.timestamp = timestamp
-        self.location = location
-        self.date = date
-        self.post_url = post_url
-        self.image_urls = image_urls
-        self.post_id = post_id
-        self.image_paths = image_paths
-        self.post_description = post_description
-        self.address_info = address_info
-        self.attribute = attribute
-
-    def as_dict(self):
-        return {
-            "title": self.title,
-            "price": self.price,
-            "timestamp": self.timestamp,
-            "location": self.location,
-            "date": self.date,
-            "post_url": self.post_url,
-            "image_urls": self.image_urls,
-            "post_id": self.post_id,
-            "image_paths": self.image_paths,
-            "post_description": self.post_description,
-            "address_info": self.address_info,
-            "attribute": self.attribute,
-        }
-
     # finish writing this
     @classmethod
     def organize_listing_data(cls, link: str, posts_data: list, **kwargs):
         images_mode = kwargs.get("images_mode")
+        path = kwargs.get("output_path")
 
         city_name = get_city_name(link)
+        source_name = f"craigslist_{city_name}"
+        current_time = get_current_time()
 
         craigslist_posts = []
         image_paths = []
@@ -333,8 +246,7 @@ class Preview(CL_item):
             price_element = posts.find("span", "priceinfo")
             price = (
                 price_element.text.strip()
-                if price_element is not None
-                else "Price not given"
+                if price_element else "Price not given"
             )
             post_url_element = posts.select_one("div.posting-title a")
             post_url = post_url_element.get("href") if post_url_element else ""
@@ -373,34 +285,34 @@ class Preview(CL_item):
 
             if image_url_src.strip() == "":
                 image_url = "No image"
+                image_path = f'{path}/images/no_image.png'
 
             else:
                 base_image_src = split_url_size(image_url_src)
                 image_url = str(base_image_src + '_600x450.jpg')
-
-            if images_mode is True:
-                image_path = download_images(image_url)
-
-            else:
-                image_path = "No image path"
+                image_path = download_images(image_url, **kwargs) if images_mode else "No image path"
 
             image_paths.append(image_path)
             post_id = parse_post_id(post_url)
 
             craigslist_posts.append(
                 cls(
-                    title,
-                    price,
-                    timestamp,
-                    location,
-                    date,
-                    post_url,
-                    image_urls,
-                    post_id,
-                    image_paths,
-                    post_description,
-                    address_info,
-                    attribute,
+                    source=source_name,
+                    is_new=1,
+                    time_added=current_time,
+                    last_updated=current_time,
+                    title=title,
+                    price=price,
+                    timestamp=timestamp,
+                    location=location,
+                    date=date,
+                    post_url=post_url,
+                    image_urls=image_urls,
+                    post_id=post_id,
+                    image_paths=image_paths,
+                    post_description=post_description,
+                    address_info=address_info,
+                    attribute=attribute,
                 )
             )
 
@@ -410,43 +322,15 @@ class Preview(CL_item):
 class Grid(CL_item):
     kind = "grid"
 
-    def __init__(
-        self,
-        title,
-        price,
-        timestamp,
-        location,
-        post_url,
-        image_url,
-        post_id,
-        image_path,
-    ):
-        self.title = title
-        self.price = price
-        self.timestamp = timestamp
-        self.location = location
-        self.post_url = post_url
-        self.image_url = image_url
-        self.post_id = post_id
-        self.image_path = image_path
-
-    def as_dict(self):
-        return {
-            "title": self.title,
-            "price": self.price,
-            "timestamp": self.timestamp,
-            "location": self.location,
-            "post_url": self.post_url,
-            "image_url": self.image_url,
-            "post_id": self.post_id,
-            "image_path": self.image_path,
-        }
-
     @classmethod
     def organize_listing_data(cls, link: str, posts_data: list, **kwargs):
         images_mode = kwargs.get("images_mode")
+        path = kwargs.get("output_path")
 
         city_name = get_city_name(link)
+        source_name = f"craigslist_{city_name}"
+        current_time = get_current_time()
+
         craigslist_posts = []
 
         for posts in posts_data:
@@ -454,13 +338,11 @@ class Grid(CL_item):
             price_element = posts.find("span", "priceinfo")
             price = (
                 price_element.text.strip()
-                if price_element is not None
-                else "Price not given"
+                if price_element else "Price not given"
             )
             post_url = (
                 posts.find("a", "posting-title").get("href")
-                if posts.find("a", "posting-title")
-                else ""
+                if posts.find("a", "posting-title") else ""
             )
 
             meta = posts.find("div", class_="meta")
@@ -478,29 +360,29 @@ class Grid(CL_item):
 
             if image_url_src.strip() == "":
                 image_url = "No image"
+                image_path = f'{path}/images/no_image.png'
 
             else:
                 base_image_src = split_url_size(image_url_src)
                 image_url = str(base_image_src + '_600x450.jpg')
-
-            if images_mode is True:
-                image_path = download_images(image_url)
-
-            else:
-                image_path = "No image path"
+                image_path = download_images(image_url, **kwargs) if images_mode else "No image path"
 
             post_id = parse_post_id(post_url)
 
             craigslist_posts.append(
                 cls(
-                    title,
-                    price,
-                    timestamp,
-                    location,
-                    post_url,
-                    image_url,
-                    post_id,
-                    image_path,
+                    source=source_name,
+                    is_new=1,
+                    time_added=current_time,
+                    last_updated=current_time,
+                    title=title,
+                    price=price,
+                    timestamp=timestamp,
+                    location=location,
+                    post_url=post_url,
+                    image_url=image_url,
+                    post_id=post_id,
+                    image_path=image_path,
                 )
             )
 
@@ -510,43 +392,15 @@ class Grid(CL_item):
 class Gallery(CL_item):
     kind = "gallery"
 
-    def __init__(
-        self,
-        title,
-        price,
-        timestamp,
-        location,
-        post_url,
-        image_url,
-        post_id,
-        image_path,
-    ):
-        self.title = title
-        self.price = price
-        self.timestamp = timestamp
-        self.location = location
-        self.post_url = post_url
-        self.image_url = image_url
-        self.post_id = post_id
-        self.image_path = image_path
-
-    def as_dict(self):
-        return {
-            "title": self.title,
-            "price": self.price,
-            "timestamp": self.timestamp,
-            "location": self.location,
-            "post_url": self.post_url,
-            "image_url": self.image_url,
-            "post_id": self.post_id,
-            "image_path": self.image_path,
-        }
-
     @classmethod
     def organize_listing_data(cls, link: str, posts_data: list, **kwargs):
         images_mode = kwargs.get("images_mode")
+        path = kwargs.get("output_path")
 
         city_name = get_city_name(link)
+        source_name = f"craigslist_{city_name}"
+        current_time = get_current_time()
+
         craigslist_posts = []
 
         for posts in posts_data:
@@ -554,13 +408,11 @@ class Gallery(CL_item):
             price_element = posts.find("span", "priceinfo")
             price = (
                 price_element.text.strip()
-                if price_element is not None
-                else "Price not given"
+                if price_element else "Price not given"
             )
             post_url = (
                 posts.find("a", "posting-title").get("href")
-                if posts.find("a", "posting-title")
-                else ""
+                if posts.find("a", "posting-title") else ""
             )
 
             meta = posts.find("div", class_="meta")
@@ -578,29 +430,29 @@ class Gallery(CL_item):
 
             if image_url_src.strip() == "":
                 image_url = "No image"
+                image_path = f'{path}/images/no_image.png'
 
             else:
                 base_image_src = split_url_size(image_url_src)
                 image_url = str(base_image_src + '_600x450.jpg')
-
-            if images_mode is True:
-                image_path = download_images(image_url)
-
-            else:
-                image_path = "No image path"
+                image_path = download_images(image_url, **kwargs) if images_mode else "No image path"
 
             post_id = parse_post_id(post_url)
 
             craigslist_posts.append(
                 cls(
-                    title,
-                    price,
-                    timestamp,
-                    location,
-                    post_url,
-                    image_url,
-                    post_id,
-                    image_path,
+                    source=source_name,
+                    is_new=1,
+                    time_added=current_time,
+                    last_updated=current_time,
+                    title=title,
+                    price=price,
+                    timestamp=timestamp,
+                    location=location,
+                    post_url=post_url,
+                    image_url=image_url,
+                    post_id=post_id,
+                    image_path=image_path,
                 )
             )
 
