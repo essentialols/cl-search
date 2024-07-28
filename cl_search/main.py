@@ -60,7 +60,7 @@ def main(**kwargs) -> None:
 
     else:
         output_file = f"{path}/{location}_{search_query}.{file_extension}"
-        df = pd.DataFrame([x.as_list() for x in collected_data])
+        df = pd.DataFrame([x.as_dict() for x in collected_data])
         df.dropna(inplace=True)
 
         default_options = get_default_options()
@@ -76,24 +76,30 @@ def main(**kwargs) -> None:
             current_time = get_current_time()
 
             existing_data = file_read(output_file, **read_options)
-            existing_post_ids = existing_data['post_id'].astype(str).tolist()
 
             for _, row in df.iterrows():
-                if row['post_id'] in existing_post_ids:
-                    existing_index = existing_data[existing_data['post_id'] == row['post_id']].index
-                    existing_data.loc[existing_index, 'is_new'] = 0
-                    existing_data.loc[existing_index, 'last_updated'] = current_time
-                    columns_to_update = ["is_new", "last_updated", "title",
-                                         "price", "timestamp", "location",
-                                         "image_url", "image_path"]
+                post_id = str(row['post_id'])
+                existing_post_ids = existing_data[existing_data['post_id'].astype(
+                    str).str.contains(post_id)]
+                existing_index = existing_post_ids.index
+
+                if not existing_post_ids.empty:
+                    columns_to_update = ["title", "price", "timestamp",
+                                         "location", "image_url", "image_path"]
 
                     for col in columns_to_update:
                         existing_data.loc[existing_index, col] = row[col]
 
-            df_output(existing_data, write_options, **kwargs)
+                    existing_data.loc[existing_index, 'is_new'] = 0
+                    existing_data.loc[existing_index, 'last_updated'] = current_time
+
+                    df_output(existing_data, write_options, **kwargs)
+
+                else:
+                    write_frames(collected_data, append_options, **kwargs)
 
         else:
-            write_frames(collected_data, **kwargs)
+            write_frames(collected_data, write_options, **kwargs)
 
         if search_query:
             print(f"Created {location}_{search_query}.{file_extension}")
