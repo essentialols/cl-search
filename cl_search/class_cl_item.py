@@ -1,10 +1,12 @@
+import logging
 from cl_search.utils import download_images
 from cl_search.utils import get_city_name
 from cl_search.utils import get_current_time
 from cl_search.utils import parse_post_id
 from cl_search.utils import split_url_size
-from bs4 import BeautifulSoup
 
+# Set up logging to print to the console
+logging.basicConfig(level=logging.DEBUG)
 
 class CL_item:
     def __init__(self, **kwargs):
@@ -26,6 +28,7 @@ class List(CL_item):
 
     @classmethod
     def organize_listing_data(cls, link: str, posts_data: list, **kwargs):
+        logging.debug(f"Using List class for processing posts.")
         city_name = get_city_name(link)
         source_name = f"craigslist_{city_name}"
         current_time = get_current_time()
@@ -34,19 +37,28 @@ class List(CL_item):
 
         for posts in posts_data:
             # Extract the title
+            logging.debug(f"Extracting title.")
             title = getattr(posts.select_one("a span.label"), "text", None)
+            logging.debug(f"Title extracted: {title}")
             
             # Extract the price
+            logging.debug(f"Extracting price.")
             price_element = posts.find("span", "priceinfo")
             price = price_element.text.strip() if price_element else "Price not given"
+            logging.debug(f"Price extracted: {price}")
 
             # Extract the post URL
+            logging.debug(f"Extracting post URL.")
             post_url = posts.find("a", "posting-title").get("href") if posts.find("a", "posting-title") else ""
+            logging.debug(f"Post URL extracted: {post_url}")
 
             # Extract the timestamp
+            logging.debug(f"Extracting timestamp.")
             timestamp = getattr(posts.select_one('span[title*="GMT"]'), "text", None)
+            logging.debug(f"Timestamp extracted: {timestamp}")
 
             # Extract location and date information
+            logging.debug(f"Extracting location and date.")
             meta = posts.find("span", class_="meta")
             if meta:
                 meta_info = meta.get_text(strip=True)
@@ -61,26 +73,28 @@ class List(CL_item):
             else:
                 date = None
                 location = f"{city_name} area"
+            logging.debug(f"Location: {location}, Date: {date}")
 
             # Extract the post ID
+            logging.debug(f"Extracting post ID.")
             post_id = parse_post_id(post_url)
+            logging.debug(f"Post ID extracted: {post_id}")
 
             # DEBUG: Log the full HTML content of the post for troubleshooting
-            print(f"Full post content: {posts.prettify()}")
+            logging.debug(f"Full post content: {posts.prettify()}")
 
             # Extract post description
+            logging.debug(f"Extracting post description.")
             post_description = posts.select_one('#postingbody')
             if post_description:
-                # Log the raw HTML of the description
-                print(f"Raw post description HTML: {post_description.prettify()}")
+                logging.debug(f"Raw post description HTML: {post_description.prettify()}")
                 post_description = post_description.decode_contents().strip()  # Extract inner HTML
             else:
                 post_description = "No description provided"
-
-            # Log the final extracted description
-            print(f"Final post description: {post_description}")
+            logging.debug(f"Final post description: {post_description}")
 
             # Extract address info and attributes (if available)
+            logging.debug(f"Extracting address info and attributes.")
             address_info = posts.find("div", class_="address-info")
             attribute = posts.find_all("div", "attrib")
 
@@ -89,6 +103,7 @@ class List(CL_item):
             image_paths = []
 
             # Extract images (if available)
+            logging.debug(f"Extracting image info.")
             image_url_src = posts.find("img").get("src") if posts.find("img") else ""
             if image_url_src.strip() == "":
                 image_url = "No image"
@@ -97,11 +112,13 @@ class List(CL_item):
                 base_image_src = split_url_size(image_url_src)
                 image_url = str(base_image_src + '_600x450.jpg')
                 image_path = download_images(image_url, **kwargs) if kwargs.get("images_mode") else "No image path"
+            logging.debug(f"Image URL: {image_url}, Image Path: {image_path}")
 
             image_urls.append(image_url)
             image_paths.append(image_path)
 
             # Append the extracted data to the list
+            logging.debug(f"Appending post data to craigslist_posts.")
             craigslist_posts.append(
                 cls(
                     source=source_name,
@@ -122,11 +139,8 @@ class List(CL_item):
                     attribute=attribute,
                 )
             )
-
+        logging.debug(f"Finished processing posts in List class.")
         return craigslist_posts
-
-
-
 
 
 class Narrow_list(CL_item):
@@ -134,6 +148,7 @@ class Narrow_list(CL_item):
 
     @classmethod
     def organize_listing_data(cls, link: str, posts_data: list, **kwargs):
+        logging.debug(f"Using Narrow_list class for processing posts.")
         city_name = get_city_name(link)
         source_name = f"craigslist_{city_name}"
         current_time = get_current_time()
@@ -142,19 +157,28 @@ class Narrow_list(CL_item):
 
         for posts in posts_data:
             # Extract the title
+            logging.debug(f"Extracting title.")
             title = getattr(posts.select_one("a span.label"), "text", None)
+            logging.debug(f"Title extracted: {title}")
             
             # Extract the price
+            logging.debug(f"Extracting price.")
             price_element = posts.find("span", "priceinfo")
             price = price_element.text.strip() if price_element else "Price not given"
+            logging.debug(f"Price extracted: {price}")
 
             # Extract the post URL
+            logging.debug(f"Extracting post URL.")
             post_url = posts.find("a", "posting-title").get("href") if posts.find("a", "posting-title") else ""
+            logging.debug(f"Post URL extracted: {post_url}")
 
             # Extract the timestamp
+            logging.debug(f"Extracting timestamp.")
             timestamp = getattr(posts.select_one('span[title*="GMT"]'), "text", None)
+            logging.debug(f"Timestamp extracted: {timestamp}")
 
             # Extract location and date information
+            logging.debug(f"Extracting location and date.")
             meta = posts.find("div", class_="supertitle")
             if meta:
                 meta_info = meta.get_text(strip=True)
@@ -169,26 +193,31 @@ class Narrow_list(CL_item):
             else:
                 date = None
                 location = f"{city_name} area"
+            logging.debug(f"Location: {location}, Date: {date}")
 
             # Extract the post ID
+            logging.debug(f"Extracting post ID.")
             post_id = parse_post_id(post_url)
+            logging.debug(f"Post ID extracted: {post_id}")
 
             # Extract post description
+            logging.debug(f"Extracting post description.")
             post_description = posts.select_one('#postingbody')
             if post_description:
                 post_description = post_description.decode_contents().strip()  # Extract inner HTML
             else:
                 post_description = "No description provided"
+            logging.debug(f"Final post description: {post_description}")
 
             # Extract address info and attributes (if available)
+            logging.debug(f"Extracting address info and attributes.")
             address_info = posts.find("div", class_="address-info")
             attribute = posts.find_all("div", class_="attrib")
 
             # Placeholder for image URLs and paths
+            logging.debug(f"Extracting image info.")
             image_urls = []
             image_paths = []
-
-            # Extract images (if available)
             image_url_src = posts.find("img").get("src") if posts.find("img") else ""
             if image_url_src.strip() == "":
                 image_url = "No image"
@@ -197,11 +226,13 @@ class Narrow_list(CL_item):
                 base_image_src = split_url_size(image_url_src)
                 image_url = str(base_image_src + '_600x450.jpg')
                 image_path = download_images(image_url, **kwargs) if kwargs.get("images_mode") else "No image path"
+            logging.debug(f"Image URL: {image_url}, Image Path: {image_path}")
 
             image_urls.append(image_url)
             image_paths.append(image_path)
 
             # Append the extracted data to the list
+            logging.debug(f"Appending post data to craigslist_posts.")
             craigslist_posts.append(
                 cls(
                     source=source_name,
@@ -214,7 +245,7 @@ class Narrow_list(CL_item):
                     location=location,
                     date=date,
                     post_url=post_url,
-                    post_description=post_description,  # Added post_description
+                    post_description=post_description,
                     post_id=post_id,
                     image_urls=image_urls,
                     image_paths=image_paths,
@@ -222,8 +253,9 @@ class Narrow_list(CL_item):
                     attribute=attribute
                 )
             )
-
+        logging.debug(f"Finished processing posts in Narrow_list class.")
         return craigslist_posts
+
 
 
 class Thumb(CL_item):
