@@ -148,15 +148,13 @@ def fetch_post_description(post_url):
                 logging.debug(f"Extracting post description.")
                 post_description = detailed_soup.select_one('#postingbody')
 
+                # Log the description extraction more concisely
                 if post_description:
-                    # Limit the logging of raw HTML to avoid large outputs
-                    logging.debug(f"Raw post description: {str(post_description)[:100]}...")  # Limit to the first 100 characters
                     post_description = post_description.decode_contents().strip()  # Extract inner HTML
-                    logging.debug(f"Post description found: {post_description[:100]}...")  # Print first 100 characters
+                    logging.debug(f"Post description found (first 100 characters): {post_description[:100]}...")
                 else:
                     post_description = "No description provided"
                     logging.debug("No post description found.")
-
 
                 return post_description
 
