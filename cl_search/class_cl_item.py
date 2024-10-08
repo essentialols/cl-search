@@ -135,30 +135,39 @@ class List(CL_item):
         logging.debug(f"Finished processing posts in List class.")
         return craigslist_posts
     
-    @staticmethod
-    def fetch_post_description(post_url):
-        if post_url:
-            try:
-                logging.debug(f"Fetching post details from URL: {post_url}")
-                response = requests.get(post_url)
-                if response.status_code == 200:
-                    detailed_soup = BeautifulSoup(response.text, 'html.parser')
-                    post_description = detailed_soup.select_one('#postingbody')
-                    if post_description:
-                        logging.debug(f"Post description found, extracting text.")
-                        return post_description.decode_contents().strip()
-                    else:
-                        logging.debug(f"No post description found.")
-                        return "No description provided"
+@staticmethod
+def fetch_post_description(post_url):
+    if post_url:
+        try:
+            logging.debug(f"Fetching post details from URL: {post_url}")
+            response = requests.get(post_url)
+            if response.status_code == 200:
+                detailed_soup = BeautifulSoup(response.text, 'html.parser')
+
+                # Extract post description
+                logging.debug(f"Extracting post description.")
+                post_description = detailed_soup.select_one('#postingbody')
+
+                if post_description:
+                    logging.debug(f"Raw post description HTML: {post_description.prettify()}")
+                    post_description = post_description.decode_contents().strip()  # Extract inner HTML
+                    logging.debug(f"Post description found: {post_description[:100]}...")  # Print first 100 characters
                 else:
-                    logging.debug(f"Failed to retrieve post page. Status code: {response.status_code}")
-                    return "Failed to retrieve description"
-            except Exception as e:
-                logging.error(f"Error fetching post description: {e}")
-                return "Error fetching description"
-        else:
-            logging.debug(f"No post URL found, skipping description extraction.")
-            return "No description provided"
+                    post_description = "No description provided"
+                    logging.debug("No post description found.")
+
+                return post_description
+
+            else:
+                logging.debug(f"Failed to retrieve post page. Status code: {response.status_code}")
+                return "Failed to retrieve description"
+        except Exception as e:
+            logging.error(f"Error fetching post description: {e}")
+            return "Error fetching description"
+    else:
+        logging.debug(f"No post URL found, skipping description extraction.")
+        return "No description provided"
+
 
 
 
