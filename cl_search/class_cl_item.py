@@ -1,4 +1,5 @@
 import logging
+import requests
 from cl_search.utils import download_images
 from cl_search.utils import get_city_name
 from cl_search.utils import get_current_time
@@ -80,17 +81,9 @@ class List(CL_item):
             post_id = parse_post_id(post_url)
             logging.debug(f"Post ID extracted: {post_id}")
 
-            # DEBUG: Log the full HTML content of the post for troubleshooting
-            logging.debug(f"Full post content: {posts.prettify()}")
-
             # Extract post description
-            logging.debug(f"Extracting post description.")
-            post_description = posts.select_one('#postingbody')
-            if post_description:
-                logging.debug(f"Raw post description HTML: {post_description.prettify()}")
-                post_description = post_description.decode_contents().strip()  # Extract inner HTML
-            else:
-                post_description = "No description provided"
+            logging.debug(f"Extracting post description from the detailed post page.")
+            post_description = cls.fetch_post_description(post_url)
             logging.debug(f"Final post description: {post_description}")
 
             # Extract address info and attributes (if available)
@@ -141,6 +134,32 @@ class List(CL_item):
             )
         logging.debug(f"Finished processing posts in List class.")
         return craigslist_posts
+    
+    @staticmethod
+    def fetch_post_description(post_url):
+        if post_url:
+            try:
+                logging.debug(f"Fetching post details from URL: {post_url}")
+                response = requests.get(post_url)
+                if response.status_code == 200:
+                    detailed_soup = BeautifulSoup(response.text, 'html.parser')
+                    post_description = detailed_soup.select_one('#postingbody')
+                    if post_description:
+                        logging.debug(f"Post description found, extracting text.")
+                        return post_description.decode_contents().strip()
+                    else:
+                        logging.debug(f"No post description found.")
+                        return "No description provided"
+                else:
+                    logging.debug(f"Failed to retrieve post page. Status code: {response.status_code}")
+                    return "Failed to retrieve description"
+            except Exception as e:
+                logging.error(f"Error fetching post description: {e}")
+                return "Error fetching description"
+        else:
+            logging.debug(f"No post URL found, skipping description extraction.")
+            return "No description provided"
+
 
 
 class Narrow_list(CL_item):
