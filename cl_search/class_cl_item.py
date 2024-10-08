@@ -542,7 +542,7 @@ class Gallery(CL_item):
             if post_description:
                 post_description = post_description.decode_contents().strip()
             else:
-                post_description = "No description provided"
+                post_description = "No description provided. Gallery."
                 logging.info(f"Missing description for post: {post_url}")
 
             # Extract the image URL and image path
