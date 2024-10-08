@@ -64,12 +64,13 @@ class List(CL_item):
             # Extract the post ID
             post_id = parse_post_id(post_url)
 
-            # Extract post description
             post_description = posts.select_one('#postingbody')
+            print(post_description)  # Add this to check if it's None or not
             if post_description:
                 post_description = post_description.decode_contents().strip()  # Extract inner HTML
             else:
                 post_description = "No description provided"
+
 
             # Extract address info and attributes (if available)
             address_info = posts.find("div", class_="address-info")
