@@ -39,13 +39,13 @@ class List(CL_item):
             # Extract the price
             price_element = posts.find("span", "priceinfo")
             price = price_element.text.strip() if price_element else "Price not given"
-
+        
             # Extract the post URL
             post_url = posts.find("a", "posting-title").get("href") if posts.find("a", "posting-title") else ""
-
+        
             # Extract the timestamp
             timestamp = getattr(posts.select_one('span[title*="GMT"]'), "text", None)
-
+        
             # Extract location and date information
             meta = posts.find("span", class_="meta")
             if meta:
@@ -61,33 +61,28 @@ class List(CL_item):
             else:
                 date = None
                 location = f"{city_name} area"
-
+        
             # Extract the post ID
             post_id = parse_post_id(post_url)
-
-            # Extract the post description, removing unnecessary elements
+        
+            # Extract post description
             post_description = posts.select_one('#postingbody')
+            print("Raw post description:", post_description)  # Print raw element to check if it's found
+        
             if post_description:
-                # Clone the element to avoid modifying the original
-                cloned_description = BeautifulSoup(str(post_description), "html.parser")
-
-                # Remove unwanted elements (e.g., div, canvas)
-                for el in cloned_description(['div', 'canvas']):
-                    el.extract()
-
-                # Extract the cleaned text content
-                post_description = cloned_description.get_text().strip()
+                post_description = post_description.decode_contents().strip()  # Extract inner HTML
+                print("Extracted description:", post_description)  # Print to verify extracted content
             else:
                 post_description = "No description provided"
-
+        
             # Extract address info and attributes (if available)
             address_info = posts.find("div", class_="address-info")
             attribute = posts.find_all("div", class_="attrib")
-
+        
             # Placeholder for image URLs and paths (assuming it's required)
             image_urls = []
             image_paths = []
-
+        
             # Extract images (if available)
             image_url_src = posts.find("img").get("src") if posts.find("img") else ""
             if image_url_src.strip() == "":
@@ -97,10 +92,10 @@ class List(CL_item):
                 base_image_src = split_url_size(image_url_src)
                 image_url = str(base_image_src + '_600x450.jpg')
                 image_path = download_images(image_url, **kwargs) if kwargs.get("images_mode") else "No image path"
-
+        
             image_urls.append(image_url)
             image_paths.append(image_path)
-
+        
             # Append the extracted data to the list
             craigslist_posts.append(
                 cls(
@@ -114,7 +109,7 @@ class List(CL_item):
                     location=location,
                     date=date,
                     post_url=post_url,
-                    post_description=post_description,
+                    post_description=post_description,  # Updated post_description extraction
                     post_id=post_id,
                     image_urls=image_urls,
                     image_paths=image_paths,
@@ -122,8 +117,6 @@ class List(CL_item):
                     attribute=attribute,
                 )
             )
-
-        return craigslist_posts
 
 
 
