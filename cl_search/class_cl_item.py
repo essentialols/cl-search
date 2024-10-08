@@ -495,95 +495,6 @@ class Grid(CL_item):
         return craigslist_posts
 
 
-# class Gallery(CL_item):
-#     kind = "gallery"
-
-#     @classmethod
-#     def organize_listing_data(cls, link: str, posts_data: list, **kwargs):
-#         images_mode = kwargs.get("images_mode", False)
-#         path = kwargs.get("output_path", "./")
-
-#         # Get city name and source info
-#         city_name = get_city_name(link)
-#         source_name = f"craigslist_{city_name}"
-#         current_time = get_current_time()
-
-#         craigslist_posts = []
-
-#         for posts in posts_data:
-#             # Extract the title
-#             title = getattr(posts.find("a", "posting-title"), "text", None)
-            
-#             # Extract the price
-#             price_element = posts.find("span", "priceinfo")
-#             price = price_element.text.strip() if price_element else "Price not given"
-
-#             # Extract the post URL
-#             post_url = posts.find("a", "posting-title").get("href") if posts.find("a", "posting-title") else ""
-
-#             # Extract the timestamp and location
-#             meta = posts.find("div", class_="meta")
-#             if meta:
-#                 meta_info = meta.get_text(strip=True)
-#                 separator = meta.find("span", class_="separator")
-#                 if separator:
-#                     split_meta = meta_info.split(separator.text)
-#                     timestamp = split_meta[0]
-#                     location = split_meta[1] if len(split_meta) > 1 else f"{city_name} area"
-#                 else:
-#                     timestamp = None
-#                     location = f"{city_name} area"
-#             else:
-#                 timestamp = None
-#                 location = f"{city_name} area"
-
-#             # Extract the post description
-#             logging.info(f"Post content snippet for description: {str(posts)[:100]}...")  # Log a snippet
-            
-#             post_description = posts.select_one('#postingbody')
-#             if post_description:
-#                 post_description = post_description.decode_contents().strip()
-#             else:
-#                 post_description = "No description provided. Gallery."
-#                 logging.info(f"Missing description for post: {post_url}")
-
-
-#             # Extract the image URL and image path
-#             image_url_src = posts.find("img").get("src") if posts.find("img") else ""
-#             if image_url_src.strip() == "":
-#                 image_url = "No image"
-#                 image_path = f'{path}/images/no_image.png'
-#             else:
-#                 base_image_src = split_url_size(image_url_src)
-#                 image_url = str(base_image_src + '_600x450.jpg')
-#                 image_path = download_images(image_url, **kwargs) if images_mode else "No image path"
-
-#             # Extract the post ID
-#             post_id = parse_post_id(post_url)
-
-#             # Append all data to the list
-#             craigslist_posts.append(
-#                 cls(
-#                     source=source_name,
-#                     is_new=1,
-#                     time_added=current_time,
-#                     last_updated=current_time,
-#                     title=title,
-#                     price=price,
-#                     timestamp=timestamp,
-#                     location=location,
-#                     post_url=post_url,
-#                     image_url=image_url,
-#                     post_id=post_id,
-#                     image_path=image_path,
-#                     post_description=post_description  # Add post description
-#                 )
-#             )
-
-#         return craigslist_posts
-
-from bs4 import BeautifulSoup
-
 class Gallery(CL_item):
     kind = "gallery"
 
@@ -599,7 +510,7 @@ class Gallery(CL_item):
 
         craigslist_posts = []
 
-        for index, posts in enumerate(posts_data):
+        for posts in posts_data:
             # Extract the title
             title = getattr(posts.find("a", "posting-title"), "text", None)
             
@@ -627,11 +538,15 @@ class Gallery(CL_item):
                 location = f"{city_name} area"
 
             # Extract the post description
+            logging.info(f"Post content snippet for description: {str(posts)[:100]}...")  # Log a snippet
+            
             post_description = posts.select_one('#postingbody')
             if post_description:
                 post_description = post_description.decode_contents().strip()
             else:
-                post_description = "No description provided."
+                post_description = "No description provided. Gallery."
+                logging.info(f"Missing description for post: {post_url}")
+
 
             # Extract the image URL and image path
             image_url_src = posts.find("img").get("src") if posts.find("img") else ""
@@ -661,17 +576,11 @@ class Gallery(CL_item):
                     image_url=image_url,
                     post_id=post_id,
                     image_path=image_path,
-                    post_description=post_description
+                    post_description=post_description  # Add post description
                 )
             )
-        
-        # Print HTML of the last post
-        if posts_data:
-            last_post_html = posts_data[-1]
-            print(BeautifulSoup(str(last_post_html), "html.parser").prettify())
 
         return craigslist_posts
-
 
 
 def identify_cl_item_type(link: str, posts_data: list, **kwargs):
