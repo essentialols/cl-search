@@ -72,9 +72,15 @@ class List(CL_item):
                     location=location,
                     date=date,
                     post_url=post_url,
-                    post_id=post_id
+                    image_urls=image_urls,
+                    post_id=post_id,
+                    image_paths=image_paths,
+                    post_description=post_description,
+                    address_info=address_info,
+                    attribute=attribute,
                 )
             )
+
 
         return craigslist_posts
 
@@ -264,9 +270,11 @@ class Preview(CL_item):
                     location = meta_info.split(separator.text)[0]
 
             timestamp = getattr(posts.find("span", "time-ago"), "text", None)
-            post_description = posts.find("div", "posting-description")
+            post_description = posts.select_one('#postingbody')  # Using the CSS selector
             if post_description:
-                pass
+                post_description = post_description.decode_contents().strip()  # Get inner HTML and strip whitespace
+            else:
+                post_description = "No description provided"
 
             address_info = posts.find("div", "address-info")
 
