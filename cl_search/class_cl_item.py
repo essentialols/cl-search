@@ -538,12 +538,15 @@ class Gallery(CL_item):
                 location = f"{city_name} area"
 
             # Extract the post description
+            logging.info(f"Post content snippet for description: {str(posts)[:100]}...")  # Log a snippet
+            
             post_description = posts.select_one('#postingbody')
             if post_description:
                 post_description = post_description.decode_contents().strip()
             else:
                 post_description = "No description provided. Gallery."
                 logging.info(f"Missing description for post: {post_url}")
+
 
             # Extract the image URL and image path
             image_url_src = posts.find("img").get("src") if posts.find("img") else ""
