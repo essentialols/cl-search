@@ -1,9 +1,12 @@
+import logging
 from cl_search.utils import download_images
 from cl_search.utils import get_city_name
 from cl_search.utils import get_current_time
 from cl_search.utils import parse_post_id
 from cl_search.utils import split_url_size
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
 
 class CL_item:
     def __init__(self, **kwargs):
@@ -34,7 +37,7 @@ class List(CL_item):
         for posts in posts_data:
             # Extract the title
             title = getattr(posts.select_one("a span.label"), "text", None)
-            
+
             # Extract the price
             price_element = posts.find("span", "priceinfo")
             price = price_element.text.strip() if price_element else "Price not given"
@@ -64,13 +67,13 @@ class List(CL_item):
             # Extract the post ID
             post_id = parse_post_id(post_url)
 
+            # Extract post description with logging for missing descriptions
             post_description = posts.select_one('#postingbody')
-            print(post_description)  # Add this to check if it's None or not
             if post_description:
-                post_description = post_description.decode_contents().strip()  # Extract inner HTML
+                post_description = post_description.decode_contents().strip()
             else:
-                post_description = "No description provided"
-
+                post_description = "No description provided. List."
+                logging.info(f"No description found for post: {post_url}")
 
             # Extract address info and attributes (if available)
             address_info = posts.find("div", class_="address-info")
@@ -166,9 +169,10 @@ class Narrow_list(CL_item):
             # Extract post description
             post_description = posts.select_one('#postingbody')
             if post_description:
-                post_description = post_description.decode_contents().strip()  # Extract inner HTML
+                post_description = post_description.decode_contents().strip()
             else:
-                post_description = "No description provided"
+                post_description = "No description provided. Narrow."
+                logging.info(f"Missing description for post: {post_url}")
 
             # Extract address info and attributes (if available)
             address_info = posts.find("div", class_="address-info")
@@ -267,7 +271,8 @@ class Thumb(CL_item):
             if post_description:
                 post_description = post_description.decode_contents().strip()
             else:
-                post_description = "No description provided"
+                post_description = "No description provided.  Thumb."
+                logging.info(f"Missing description for post: {post_url}")
 
             # Extract the image URL and image path
             image_url_src = posts.find("img").get("src") if posts.find("img") else ""
@@ -450,9 +455,10 @@ class Grid(CL_item):
             # Extract the post description
             post_description = posts.select_one('#postingbody')
             if post_description:
-                post_description = post_description.decode_contents().strip()  # Extract inner HTML
+                post_description = post_description.decode_contents().strip()
             else:
-                post_description = "No description provided"
+                post_description = "No description provided. Grid."
+                logging.info(f"Missing description for post: {post_url}")
 
             # Extract the image URL and image path
             image_url_src = posts.find("img").get("src") if posts.find("img") else ""
@@ -488,13 +494,6 @@ class Grid(CL_item):
 
         return craigslist_posts
 
-
-
-from cl_search.utils import download_images
-from cl_search.utils import get_city_name
-from cl_search.utils import get_current_time
-from cl_search.utils import parse_post_id
-from cl_search.utils import split_url_size
 
 class Gallery(CL_item):
     kind = "gallery"
@@ -541,9 +540,10 @@ class Gallery(CL_item):
             # Extract the post description
             post_description = posts.select_one('#postingbody')
             if post_description:
-                post_description = post_description.decode_contents().strip()  # Extract inner HTML
+                post_description = post_description.decode_contents().strip()
             else:
                 post_description = "No description provided"
+                logging.info(f"Missing description for post: {post_url}")
 
             # Extract the image URL and image path
             image_url_src = posts.find("img").get("src") if posts.find("img") else ""
