@@ -112,42 +112,30 @@ def insert_listings(db: Connection, row: pd.DataFrame) -> None:
             post_timestamp,
             post_url
         )
-        VALUES (
-            ?,
-            ?,
-            ?,
-            ?,
-            ?,
-            ?,
-            ?,
-            ?,
-            ?,
-            ?,
-            ?,
-            ?
-        );
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     """
 
     cursor.execute(
         insert_listing_query,
         (
             1,
-            row["time_added"],
+            row["time_added"].item() if isinstance(row["time_added"], pd.Series) else row["time_added"],
             current_time,
-            row["title"],
-            row.get(["post_description"], ""),
-            row["price"],
-            row["location"],
-            row["post_id"],
-            row.get(["address_info"], ""),
-            row.get(["attribute"], ""),
-            row["timestamp"],
-            row["post_url"]
-        ),
+            row["title"].item() if isinstance(row["title"], pd.Series) else row["title"],
+            row["post_description"].item() if isinstance(row["post_description"], pd.Series) else row["post_description"],
+            row["price"].item() if isinstance(row["price"], pd.Series) else row["price"],
+            row["location"].item() if isinstance(row["location"], pd.Series) else row["location"],
+            row["post_id"].item() if isinstance(row["post_id"], pd.Series) else row["post_id"],
+            row.get("address_info", "").item() if isinstance(row.get("address_info", ""), pd.Series) else row.get("address_info", ""),
+            row.get("attribute", "").item() if isinstance(row.get("attribute", ""), pd.Series) else row.get("attribute", ""),
+            row["timestamp"].item() if isinstance(row["timestamp"], pd.Series) else row["timestamp"],
+            row["post_url"].item() if isinstance(row["post_url"], pd.Series) else row["post_url"],
+        )
     )
 
     db.commit()
     cursor.close()
+
 
 
 def insert_data_sources(db: Connection, row: pd.DataFrame) -> None:
