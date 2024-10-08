@@ -3,6 +3,7 @@ from cl_search.utils import get_city_name
 from cl_search.utils import get_current_time
 from cl_search.utils import parse_post_id
 from cl_search.utils import split_url_size
+from bs4 import BeautifulSoup
 
 
 class CL_item:
@@ -64,13 +65,20 @@ class List(CL_item):
             # Extract the post ID
             post_id = parse_post_id(post_url)
 
+            # Extract the post description, removing unnecessary elements
             post_description = posts.select_one('#postingbody')
-            print(post_description)  # Add this to check if it's None or not
             if post_description:
-                post_description = post_description.decode_contents().strip()  # Extract inner HTML
+                # Clone the element to avoid modifying the original
+                cloned_description = BeautifulSoup(str(post_description), "html.parser")
+
+                # Remove unwanted elements (e.g., div, canvas)
+                for el in cloned_description(['div', 'canvas']):
+                    el.extract()
+
+                # Extract the cleaned text content
+                post_description = cloned_description.get_text().strip()
             else:
                 post_description = "No description provided"
-
 
             # Extract address info and attributes (if available)
             address_info = posts.find("div", class_="address-info")
@@ -116,6 +124,7 @@ class List(CL_item):
             )
 
         return craigslist_posts
+
 
 
 
